@@ -1,4 +1,4 @@
-'''in this file we check one of the steps in the computation of the auto correlation function of white noise convolved with a Gaussian kernel'''
+'''in this file we check one of the steps in the computation of the autocorrelation function of white noise convolved with a Gaussian kernel done in the paper'''
 
 import sympy as sp
 

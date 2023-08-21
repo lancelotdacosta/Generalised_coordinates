@@ -11,7 +11,7 @@ def taylor_eval(derivs, at, Time): #evaluation of Taylor polynomial at some time
     derivs = A sequence of time derivatives up to order N (including order zero) specified as a 1D numpy array of size N+1
     at = The time Point at which the derivatives are taken, Specified as a scalar
     Time = A sequence of time points specified as a 1D numpy array at which to return the values of the Taylor polynomial'''
-    order = derivs.size # number of derivatives +1 (counting for the zeroth derivative)
+    order = derivs.shape[0] # number of derivatives +1 (counting for the zeroth derivative)
     Taylor = np.zeros(Time.size)
     for n in range(order):
         Taylor += derivs[n] * (Time - at) ** n / np.math.factorial(n) #add subsequent orders of the Taylor expansion evaluated on the time grid
