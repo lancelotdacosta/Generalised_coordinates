@@ -11,6 +11,10 @@ from Routines import Taylor_series
 from Routines import sampling_generalised_noise
 from Routines import colourline
 import matplotlib.pyplot as plt
+from integration import Euler
+from scipy.linalg import expm
+
+
 
 
 '''Part 0: specifying the OU process'''
@@ -23,10 +27,10 @@ alpha = 1 #Scaling of solenoidal flow
 
 Q = np.array([0, 1, -1, 0]).reshape([dim, dim]) #solenoidal flow matrix
 
-B= np.eye(dim)+alpha*Q #negative drift matrix of OU process for a steady state distribution N(0,I)
+B= -(np.eye(dim)+alpha*Q) #negative drift matrix of OU process for a steady state distribution N(0,I)
 
 def flow(x):
-    return -B @ x
+    return B @ x
 
 #B=-np.ones(1)
 
@@ -41,7 +45,7 @@ K = sp.sqrt(beta / (2 * sp.pi)) * sp.exp(-beta / 2 * h * h) # NORMALISED Gaussia
 
 '''Part 1: Specifying parameters of integration'''
 
-N = 5 #number of sample paths
+N = 30 #number of sample paths
 
 x0 = 10*np.ones([dim, N]) #initial condition
 
@@ -106,22 +110,86 @@ for n in range(N):
     wt[:, :, n] = Taylor_series.taylor_eval_nd(derivs=tilde_w0[:, :, n], at=0,Time=Time)
 
 
+'Part 3b: getting the solution by Euler integration'
 
-'''Part 4: Plots'''
 
-'Part 4a: 2D plot of sample path gen coord method'
+xt_Euler= Euler.Euler_integration(x0=x0,f=flow, wt=wt,Time=Time)
+
+'''Part 4: Path of least action'''
+
+
+'Part 4a: getting the path of least action, ie path in the absence of noise'
+xt_least=np.empty([dim,Time.size,N])
+for t in range(timesteps):
+    xt_least[:,t,:]=expm(B*Time[t])@x0
+    #if t%20==0 and t<300:
+    #    print(xt_least[:,t,:])
+
+#xt_least= Euler.Euler_integration(x0=x0,f=flow, wt=np.zeros(wt.shape),Time=Time)
+
+
+'''Part 5: Plots'''
+
+'Part 5a: 2D plot of sample path gen coord method'
 plot_timesteps=280
 plot_indices=range(min(plot_timesteps,timesteps))
+lw=0.5
+alpha=0.3
 #n=1 #trajectory to plot
 
 plt.figure(1)
 plt.clf()
-
-plt.suptitle(f'Sample trajectories', fontsize=16)
-plt.title(f'Generalised coordinates, order={order}', fontsize=14)
+plt.suptitle(f'2D Coloured OU process', fontsize=16)
+plt.title(f'Generalised coordinates, order={order+1}', fontsize=14)
+plt.plot(xt_least[0,plot_indices,0], xt_least[1,plot_indices,0], color='gray',linestyle=':')
 for n in range(N):
-    colourline.plot_cool(xt[0, plot_indices, n].reshape(plot_timesteps), xt[1, plot_indices, n].reshape(plot_timesteps), lw=0.5)
+    #plt.plot(xt[0, plot_indices, n], xt[1, plot_indices, n], linewidth=lw, alpha=alpha)
+    colourline.plot_cool(xt[0, plot_indices, n].reshape(plot_timesteps), xt[1, plot_indices, n].reshape(plot_timesteps), lw=lw,alpha=alpha)
+plt.xlim(right=12,left=-5)
+plt.ylim(top=12,bottom=-5)
 
 
+'Part 5b: 2D plot of Euler method'
+
+plt.figure(2)
+plt.clf()
+plt.plot(xt_least[0,plot_indices,0], xt_least[1,plot_indices,0], color='gray',linestyle=':')
+for n in range(N):  # Iterating over samples of white noise
+    #plt.plot(xt_Euler[0,plot_indices, n], xt_Euler[1,plot_indices, n], linewidth=lw,alpha=alpha)
+    colourline.plot_cool(xt_Euler[0, plot_indices, n].reshape(plot_timesteps), xt_Euler[1, plot_indices, n].reshape(plot_timesteps), lw=lw,alpha=alpha)
+plt.suptitle('2D Coloured OU process', fontsize=16)
+plt.title(f'Euler method, order={order+1}', fontsize=14)
+plt.xlim(right=12,left=-5)
+plt.ylim(top=12,bottom=-5)
+# plt.savefig(f"OU2d_EPR_func_gamma.png", dpi=100)
+
+'Part 5c: 2D plot of convolved white noise'
+
+plt.figure(3)
+plt.clf()
+for n in range(N):  # Iterating over samples of white noise
+    #plt.plot(wt[0,plot_indices, n], wt[1,plot_indices, n], linewidth=lw,alpha=0.5)
+    colourline.plot_cool(wt[0, plot_indices, n].reshape(plot_timesteps), wt[1, plot_indices, n].reshape(plot_timesteps), lw=lw,alpha=0.5)
+plt.suptitle('2D Coloured noise', fontsize=16)
+plt.title(f'Generalised coordinates, order={order}', fontsize=14)
+plt.xlim(right=2.5,left=-2.5)
+plt.ylim(top=2.5,bottom=-2.5)
+# plt.savefig(f"OU2d_EPR_func_gamma.png", dpi=100)
+
+
+'Part 5d: 1D plot of convolved white noise'
+
+plt.figure(4)
+plt.clf()
+for n in range(N):
+    #plt.plot(Time[plot_indices], wt[1, plot_indices, n] / wt[0, plot_indices, n], linewidth=lw, alpha=1,color='b')
+    for d in range(dim):  # Iterating over samples of white noise
+        plt.plot(Time[plot_indices], wt[d,plot_indices, n], linewidth=lw,alpha=0.5)
+plt.xlabel(r'Time $t$')
+plt.ylabel(r'$w_t$')
+plt.suptitle('Coloured noise', fontsize=16)#
+plt.title(f'Generalised coordinates, order={order}', fontsize=14)
+plt.ylim(top=10,bottom=-10)
+# plt.savefig(f"OU2d_EPR_func_gamma.png", dpi=100)
 
 

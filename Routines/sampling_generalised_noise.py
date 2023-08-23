@@ -46,14 +46,29 @@ def sample_gen_noise(K,wrt,at,order,N): #N=number of samples,
 #    samples=dist.rvs(size=N*dim).T
 #    return samples.reshape([dim,order,N])
 
+#def sample_gen_noise_nd(K,wrt,at,order,N,dim=1): #flawed method. Correct one below #dim=Dimension of each order of generalised noise. This is to generate n-dimensional noise that is independent across dimensions
+#    dist=dist_gen_noise(K,wrt,at,order)
+#    temporal_samples=dist.rvs(size=N).T
+#    spatial_samples=np.random.multivariate_normal(mean=np.zeros(dim), cov=np.eye(dim),size=N).T
+#    samples=np.empty([dim, order, N])
+#    for n in range(N):
+#        samples[:,:,n]=np.outer(spatial_samples[:,n],temporal_samples[:,n])
+#    return samples
+
+
 def sample_gen_noise_nd(K,wrt,at,order,N,dim=1): #dim=Dimension of each order of generalised noise. This is to generate n-dimensional noise that is independent across dimensions
-    dist=dist_gen_noise(K,wrt,at,order)
-    temporal_samples=dist.rvs(size=N).T
-    spatial_samples=np.random.multivariate_normal(mean=np.zeros(dim), cov=np.eye(dim),size=N).T
+    #but one could use this function to generate additive noise with spatial covariance S by replacing np.eye(dim) by S
+    gen_cov = gen_covariance(K, wrt, at, order)
+    gen_cov_nd= np.kron(gen_cov,np.eye(dim))
+    samples_temp=np.random.multivariate_normal(mean=np.zeros(order*dim), cov=gen_cov_nd, size=N).T
     samples=np.empty([dim, order, N])
-    for n in range(N):
-        samples[:,:,n]=np.outer(spatial_samples[:,n],temporal_samples[:,n])
+    for o in range(order):
+        for d in range(dim):
+            #print(o,d,o*dim+d)
+            samples[d,o,:]= samples_temp[o*dim+d,:]
     return samples
+
+
 
 '''Test of method'''
 #beta = sp.symbols('beta')
@@ -74,7 +89,7 @@ def sample_gen_noise_nd(K,wrt,at,order,N,dim=1): #dim=Dimension of each order of
 #sample=sample_gen_noise(K,wrt,at,order,N)
 #sample_nd=sample_gen_noise_nd(K,wrt,at,order,N,dim)
 
-#errors= np.zeros([dim, order,order])
+#errors= np.zeros([dim, order, order])
 #for d in range(dim):
 #    errors[d,:,:]= gen_cov-np.cov(sample_nd[d,:,:])
 
