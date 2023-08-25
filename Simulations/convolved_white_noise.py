@@ -28,7 +28,7 @@ Time=np.round(Time,decimal_tol)
 
 timesteps = Time.size # Number of time steps
 
-N = 32 # Number of white noise sample paths
+N = 1024 # Number of white noise sample paths
 
 
 'Part 1b: Setting up the convolution kernel'
