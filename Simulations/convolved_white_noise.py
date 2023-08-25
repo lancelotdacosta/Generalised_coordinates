@@ -18,22 +18,17 @@ lw = 0.5
 
 'Part 1a: Setting up the time and sample parameters'
 
-decimal_order = 2
-
-
-T=10 # boundary of master time interval
-timesteps =2*T*10**2+1 # Number of time steps
+decimal_tol = 2 #decimal tolerance for timesteps
+timestep =10**-decimal_tol # Number of time steps
 
 #setting up master time interval
-Time = np.linspace(-T, T, timesteps)
-timestep = Time[1]-Time[0] # Number of time steps
+T=10 # boundary of master time interval
+Time = np.arange(-T, T+timestep, timestep)
+Time=np.round(Time,decimal_tol)
 
-#Time= np.linspace(-10, 10,int(20/timestep)+1)
-#Time = np.round(Time,decimal_order)
+timesteps = Time.size # Number of time steps
 
-N = 2  # Number of white noise sample paths
-
-
+N = 32 # Number of white noise sample paths
 
 
 'Part 1b: Setting up the convolution kernel'
@@ -68,22 +63,19 @@ plt.suptitle('Gaussian kernel', fontsize=16)
 'Part 1b: Sampling the standard white noise'
 
 #We define a larger time interval for padding of the convolution, so that the convolution on the time interval Time is accurate
-pad = np.arange(timestep, 10/np.sqrt(beta), timestep)
-#pad= np.round(pad,decimal_order)
-#Time_padded=np.concatenate((Time.min()-np.flip(pad),Time,Time.max()+pad))
-pad_interval=np.concatenate((-np.flip(pad),np.zeros(1),pad))
-
-#sample N paths of standard white noise on the master time interval
-w = np.random.multivariate_normal(np.zeros(Time.size), np.eye(Time.size), size=N).T
-
-#N paths of standard white noise on the standard time interval
-#padded_index_min=int(np.where(Time_padded == Time.min())[0])
-#padded_index_max=int(np.where(Time_padded == Time.max())[0])+1
-#w= w_padded[range(padded_index_min,padded_index_max),:]
+pad = np.arange(0, T+10/np.sqrt(beta), timestep)+timestep
+pad= np.round(pad,decimal_tol)
+Time_padded=np.concatenate((Time.min()-np.flip(pad),Time,Time.max()+pad))
 
 #sample N paths of standard white noise on the padded time interval
-w_pad_right = np.random.multivariate_normal(np.zeros(pad.size), np.eye(pad.size), size=N).T
-w_pad_left = np.random.multivariate_normal(np.zeros(pad.size), np.eye(pad.size), size=N).T
+w_padded = np.random.normal(loc=0, scale=1, size=[Time_padded.size,N])
+
+#N paths of standard white noise on the master time interval
+padded_index_min=int(np.where(Time_padded == Time.min())[0])
+padded_index_max=int(np.where(Time_padded == Time.max())[0])
+w= w_padded[range(padded_index_min,padded_index_max+1),:]
+
+
 
 
 
@@ -118,36 +110,15 @@ plt.suptitle('Standard white noise', fontsize=16)
 
 '1c: Convolution of white noise with a Gaussian kernel'
 
-conv = np.zeros(w.shape) # size: Time x N
+conv = np.empty(w.shape) # size: Time x N
 
 for t in range(Time.size):
-    for s in range(pad_interval.size): #s>0
-        t_s= Time[t]-pad_interval[s] #initialise value of t-s
-        if t_s >Time.max():
+    conv[t,:]= k(Time[t]-Time_padded)@ w_padded*np.sqrt(timestep)
+    #Note: I don't understand why this scaling factor of np.sqrt(timestep)
+    #gives us the right variance in the end
+    #Given the Riemann sum decomposition of the convolution integral
+    #we would expect that the scaling here needs to be timestep
 
-
-
-        # if Time[t]-padding[s]>Time.max():
-        #     time_index = int(np.where(padding == Time[t] - padding[s])[0])
-        #     conv[t, :] += w_padded_right[time_index, :] * k(padding[s]) * timestep
-        # elif Time[t]-padding[s]<Time.min():
-        #     time_index = int(np.where(padding == Time[t] - padding[s])[0])
-        #     conv[t, :] += w_padded_left[time_index, :] * k(padding[s]) * timestep
-        # elif Time[t]-padding[s]>=Time.min() and Time[t]-padding[s]<=Time.max():
-        #     time_index = int(np.where(Time == Time[t] - padding[s])[0])
-        #     conv[t, :] += w[time_index, :] * k(padding[s])*timestep
-        # else:
-        #     print('error')
-
-# for t in range(Time.size):
-#     for s in range(padding.size):
-#             try:
-#                 time_index = int(np.where(Time_padded == np.round(Time[t] - padding[s],decimal_order))[0])
-#             except:
-#                 print(t,s)
-#             conv[t, :] += w_padded[time_index, :] * k(padding[s]) * timestep
-
-# conv /= len(kernel)
 
 
 'Figure 2: Plotting white noise convolved with Gaussian kernel'
@@ -298,12 +269,12 @@ plt.plot(Time[plot_test], var_theo[plot_test], label='Theory')
 # plt.legend()
 # plt.xlabel(r'$\theta$')
 # plt.ylabel(r'$e_p(\gamma)$')
+plt.ylim((0.9*var_theo[0],1.1*var_theo[0]))
 plt.legend()
 plt.suptitle('Variance of each method over time', fontsize=16)
-plt.yscale('log')
 #plt.title(f'Generalised coordinates, order={order}', fontsize=14)
 # plt.yscale('log')
 # plt.savefig(f"OU2d_EPR_func_gamma.png", dpi=100)
 
 
-print(var_conv[plot_test]/var_theo[plot_test])
+print(var_theo[0],np.median(var_conv[plot_test]),np.median(var_gen[plot_test]))
