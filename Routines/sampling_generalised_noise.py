@@ -5,6 +5,7 @@ Assuming that the noise is a mean zero smooth Gaussian process with the given au
 import numpy as np
 import sympy as sp
 from scipy.stats import multivariate_normal
+import scipy
 
 
 def formal_serial_derivs(K, wrt, order):  # formal symbolic expressions of the derivatives of K up to certain order (including order 0)
@@ -72,18 +73,19 @@ def sample_gen_noise_nd(K,wrt,at,order,N,dim=1): #dim=Dimension of each order of
 
 '''Test of method'''
 #beta = sp.symbols('beta')
-#beta=1
-#h = sp.symbols('h')
-
-#K = sp.sqrt(beta / (2 * sp.pi)) * sp.exp(-beta / 2 * h * h) # NORMALISED Gaussian kernel given as a symbolic expression
-#wrt=h
-#at=0
-#order =3
-#N=10**6
-#dim=2
-
-#form_derivs=formal_serial_derivs(K, wrt, order)
-#num_derivs=num_serial_derivs(K, wrt, at, order)
+# beta=1
+# h = sp.symbols('h')
+#
+# K = sp.sqrt(beta / (2 * sp.pi)) * sp.exp(-beta / 2 * h * h) # NORMALISED Gaussian kernel given as a symbolic expression
+# K = sp.exp(-beta / 2 * h * h) # UNNORMALISED Gaussian kernel given as a symbolic expression
+# wrt=h
+# at=0
+# order =3
+# #N=10**6
+# #dim=2
+#
+# form_derivs=formal_serial_derivs(K, wrt, order)
+# num_derivs=num_serial_derivs(K, wrt, at, order)
 #gen_cov=gen_covariance(K, wrt, at, order)
 #dist =dist_gen_noise(K,wrt,at,order)
 #sample=sample_gen_noise(K,wrt,at,order,N)
@@ -96,7 +98,42 @@ def sample_gen_noise_nd(K,wrt,at,order,N,dim=1): #dim=Dimension of each order of
 #print(errors[0,:,:])
 #print(errors[1,:,:])
 
+'''Finding the sequence of derivatives for Gaussian kernel'''
+# #beta = sp.symbols('beta')
+# beta=1
+# h = sp.symbols('h')
+#
+# K = sp.exp(-beta / 2 * h * h) # UNNORMALISED Gaussian kernel given as a symbolic expression
+# wrt=h
+# at=0
+# order =4
+#
+# num_derivs=num_serial_derivs(K, wrt, at, order)
+# print(num_derivs)
+#
+# num_derivs=np.array(num_derivs)
+# print(num_derivs)
+#
+# odd=[i for i in range(-1,order) if i%2 != 0]
+# attempt_derivs=scipy.special.factorial2(odd)
+# print(attempt_derivs)
+#
+# indices= [i+1 for i in odd]
+# num_derivs=num_derivs[indices]
+# print(num_derivs/attempt_derivs)
 
+'''Finding the generalised covariance and precision in the white noise limit of beta to \infty'''
 
-
+# h = sp.symbols('h')
+# wrt=h
+# at=0
+# order =4
+#
+# for beta in np.geomspace(1,10000,6):
+#     print('beta',beta)
+#     K = sp.sqrt(beta / (2 * sp.pi))*sp.exp(-beta / 2 * h * h)  # UNNORMALISED Gaussian kernel given as a symbolic expression
+#     gen_cov=gen_covariance(K, wrt, at, order)
+#     gen_pres= np.linalg.inv(gen_cov)
+#     print('--cov',gen_cov[0,0])
+#     print('--pres', gen_pres[0,0])
 

@@ -9,6 +9,7 @@ import sympy as sp
 import matplotlib.pyplot as plt
 from Routines import Taylor_series
 from Routines import sampling_generalised_noise
+from Routines import convolving_white_noise
 
 # plot parameters
 lw = 0.5
@@ -28,16 +29,16 @@ Time=np.round(Time,decimal_tol)
 
 timesteps = Time.size # Number of time steps
 
-N = 1024 # Number of white noise sample paths
+N = 64 # Number of white noise sample paths
 
 
-'Part 1b: Setting up the convolution kernel'
+'Part 1b: Setting up the parameters of the Gaussian convolution kernel'
 
 #def k(t, beta):  # unnormalised Gaussian kernel
 #    return np.exp(-beta * t * t)
 
 # Gaussian kernel parameter
-beta = 1  # 10 ** -1  # scaling parameter
+beta =  10 ** 0  # scaling parameter
 
 def k(t):  # normalised Gaussian kernel
     return np.exp(-beta * t * t)*np.sqrt(beta/np.pi)
@@ -58,25 +59,25 @@ plt.plot(Time[plot_indices], k(Time[plot_indices]), linewidth=lw)
 plt.suptitle('Gaussian kernel', fontsize=16)
 # plt.title(r'function of $b_{\mathrm{irr}}$ scaling factor $\theta$', fontsize=14)
 # plt.yscale('log')
-# plt.savefig(f"OU2d_EPR_func_gamma.png", dpi=100)
+plt.savefig(f"Gaussian_1D", dpi=100)
+
+
+plt.figure(-1)
+plt.clf()
+plt.plot(Time[plot_indices], k(Time[plot_indices])*0+1, linewidth=lw)
+# plt.plot(gammas, epr_gamma_alter, c='black', linestyle='dashed')
+# plt.legend()
+# plt.xlabel(r'$\theta$')
+# plt.ylabel(r'$e_p(\gamma)$')
+plt.suptitle('Gaussian kernel', fontsize=16)
+# plt.title(r'function of $b_{\mathrm{irr}}$ scaling factor $\theta$', fontsize=14)
+# plt.yscale('log')
+plt.savefig(f"uniform_1D", dpi=100)
 
 'Part 1b: Sampling the standard white noise'
 
-#We define a larger time interval for padding of the convolution, so that the convolution on the time interval Time is accurate
-pad = np.arange(0, T+10/np.sqrt(beta), timestep)+timestep
-pad= np.round(pad,decimal_tol)
-Time_padded=np.concatenate((Time.min()-np.flip(pad),Time,Time.max()+pad))
-
-#sample N paths of standard white noise on the padded time interval
-w_padded = np.random.normal(loc=0, scale=1, size=[Time_padded.size,N])
-
 #N paths of standard white noise on the master time interval
-padded_index_min=int(np.where(Time_padded == Time.min())[0])
-padded_index_max=int(np.where(Time_padded == Time.max())[0])
-w= w_padded[range(padded_index_min,padded_index_max+1),:]
-
-
-
+w = np.random.normal(loc=0, scale=1, size=[Time.size,N])
 
 
 'Figure 2: Plotting standard white noise'
@@ -84,15 +85,15 @@ w= w_padded[range(padded_index_min,padded_index_max+1),:]
 plt.figure(1)
 plt.clf()
 for n in range(N):
-    plt.plot(Time[plot_indices], w[plot_indices, n], linewidth=lw)
+    plt.plot(Time[plot_indices], w[plot_indices, n], linewidth=lw/2)
 # plt.plot(gammas, epr_gamma_alter, c='black', linestyle='dashed')
 # plt.legend()
 # plt.xlabel(r'$\theta$')
 # plt.ylabel(r'$e_p(\gamma)$')
 plt.suptitle('Standard white noise', fontsize=16)
-plt.title(r'Zoomed', fontsize=14)
+# plt.title(r'Zoomed', fontsize=14)
 # plt.yscale('log')
-# plt.savefig(f"OU2d_EPR_func_gamma.png", dpi=100)
+plt.savefig(f"convolved_white_1D", dpi=100)
 
 plt.figure(2)
 plt.clf()
@@ -108,17 +109,9 @@ plt.suptitle('Standard white noise', fontsize=16)
 # plt.savefig(f"OU2d_EPR_func_gamma.png", dpi=100)
 
 
-'1c: Convolution of white noise with a Gaussian kernel'
+'1c: Sampling white noise convolved with a Gaussian kernel'
 
-conv = np.empty(w.shape) # size: Time x N
-
-for t in range(Time.size):
-    conv[t,:]= k(Time[t]-Time_padded)@ w_padded*np.sqrt(timestep)
-    #Note: I don't understand why this scaling factor of np.sqrt(timestep)
-    #gives us the right variance in the end
-    #Given the Riemann sum decomposition of the convolution integral
-    #we would expect that the scaling here needs to be timestep
-
+wt_conv = convolving_white_noise.white_noise_conv_Gaussian_kernel(Time, N)
 
 
 'Figure 2: Plotting white noise convolved with Gaussian kernel'
@@ -127,20 +120,21 @@ for t in range(Time.size):
 plt.figure(3)
 plt.clf()
 for n in range(N):  # Iterating over samples of white noise
-    plt.plot(Time[plot_indices], conv[plot_indices, n], linewidth=lw)
+    plt.plot(Time[plot_indices], wt_conv[plot_indices, n], linewidth=lw)
 # plt.plot(gammas, epr_gamma_alter, c='black', linestyle='dashed')
 # plt.legend()
 # plt.xlabel(r'$\theta$')
 # plt.ylabel(r'$e_p(\gamma)$')
 plt.suptitle('White noise convolved with Gaussian kernel', fontsize=16)
-plt.title(r'Convolution method, Zoomed', fontsize=14)
+plt.title(r'Convolution method', fontsize=14)
 # plt.yscale('log')
-# plt.savefig(f"OU2d_EPR_func_gamma.png", dpi=100)
+plt.savefig(f"convolved_white_1D_conv", dpi=100)
+
 
 plt.figure(4)
 plt.clf()
 for n in range(N):  # Iterating over samples of white noise
-    plt.plot(Time, conv[:, n], linewidth=lw)
+    plt.plot(Time, wt_conv[:, n], linewidth=lw)
 # plt.plot(gammas, epr_gamma_alter, c='black', linestyle='dashed')
 # plt.legend()
 # plt.xlabel(r'$\theta$')
@@ -148,7 +142,6 @@ for n in range(N):  # Iterating over samples of white noise
 plt.suptitle('White noise convolved with Gaussian kernel', fontsize=16)
 plt.title('Convolution method', fontsize=14)
 # plt.yscale('log')
-# plt.savefig(f"OU2d_EPR_func_gamma.png", dpi=100)
 
 
 
@@ -176,7 +169,7 @@ kappa = sp.sqrt(beta / (2 * sp.pi)) * sp.exp(-beta / 2 * h * h)
 # serial derivatives of the autocovariance at the origin
 
 at = 0
-order = 9  # Number of orders of motion
+order = 10  # Number of orders of motion
 
 #form_derivs= sampling_generalised_noise.formal_serial_derivs(kappa, h, 2 * order)
 #num_derivs = sampling_generalised_noise.num_serial_derivs(kappa, h, at, 2 * order)
@@ -191,9 +184,9 @@ tilde_w0 = sampling_generalised_noise.sample_gen_noise(K=kappa,wrt=h,at=at,order
 
 'Part 2d: generating trajectories'
 
-w_gen = np.zeros(w.shape)  # white noise generated by generalised coordinates
+wt_gen = np.zeros(w.shape)  # white noise generated by generalised coordinates
 for i in range(N):
-    w_gen[:, i] = Taylor_series.taylor_eval(derivs=tilde_w0[:, i], at=0,Time=Time)
+    wt_gen[:, i] = Taylor_series.taylor_eval(derivs=tilde_w0[:, i], at=0,Time=Time)
 
 # w_gen2 =np.zeros(w.shape) #Alternative method, may turn out to be more efficient, Not yet working
 # for n in range(order+1):
@@ -205,15 +198,15 @@ for i in range(N):
 plt.figure(5)
 plt.clf()
 for n in range(N):  # Iterating over samples of white noise
-    plt.plot(Time[plot_indices], w_gen[plot_indices, n], linewidth=lw)
+    plt.plot(Time[plot_indices], wt_gen[plot_indices, n], linewidth=lw)
 # plt.plot(gammas, epr_gamma_alter, c='black', linestyle='dashed')
 # plt.legend()
 # plt.xlabel(r'$\theta$')
 # plt.ylabel(r'$e_p(\gamma)$')
 plt.suptitle('White noise convolved with Gaussian kernel', fontsize=16)
 plt.title(f'Generalised coordinates, order={order}', fontsize=14)
-# plt.yscale('log')
-# plt.savefig(f"OU2d_EPR_func_gamma.png", dpi=100)
+plt.ylim([-2,2])
+plt.savefig(f"convolved_white_1D_gen", dpi=100)
 
 
 '''Part 3: tests'''
@@ -225,7 +218,7 @@ plot_test = range(-int(3 * timesteps / 100) + int(timesteps / 2), int(3 * timest
 plt.figure(6)
 plt.clf()
 for n in range(N):  # Iterating over samples of white noise
-    plt.plot(Time[plot_test], conv[plot_test, n], linewidth=lw)
+    plt.plot(Time[plot_test], wt_conv[plot_test, n], linewidth=lw)
 # plt.plot(gammas, epr_gamma_alter, c='black', linestyle='dashed')
 # plt.legend()
 # plt.xlabel(r'$\theta$')
@@ -233,12 +226,12 @@ for n in range(N):  # Iterating over samples of white noise
 plt.suptitle('White noise convolved with Gaussian kernel', fontsize=16)
 plt.title(f'Convolution method', fontsize=14)
 # plt.yscale('log')
-# plt.savefig(f"OU2d_EPR_func_gamma.png", dpi=100)
+plt.savefig(f"convolved_white_1D_conv_zoom", dpi=100)
 
 plt.figure(7)
 plt.clf()
 for n in range(N):  # Iterating over samples of white noise
-    plt.plot(Time[plot_test], w_gen[plot_test, n], linewidth=lw)
+    plt.plot(Time[plot_test], wt_gen[plot_test, n], linewidth=lw)
 # plt.plot(gammas, epr_gamma_alter, c='black', linestyle='dashed')
 # plt.legend()
 # plt.xlabel(r'$\theta$')
@@ -246,17 +239,17 @@ for n in range(N):  # Iterating over samples of white noise
 plt.suptitle('White noise convolved with Gaussian kernel', fontsize=16)
 plt.title(f'Generalised coordinates, order={order}', fontsize=14)
 # plt.yscale('log')
-# plt.savefig(f"OU2d_EPR_func_gamma.png", dpi=100)
+plt.savefig(f"convolved_white_1D_gen_zoom", dpi=100)
 
 
 'Testing the empirical variance of w_t (at each t) for each method'
-'Theoretically, it is time independent and should equal: '
+'Theoretically, it is time independent and should equal:'
 'sqrt(pi/2beta) for the unnormalised Gaussian kernel'
 'sqrt(beta/2pi) for the normalised Gaussian kernel'
 
 
-var_conv= np.var(conv,axis=1)
-var_gen= np.var(w_gen,axis=1)
+var_conv= np.var(wt_conv,axis=1)
+var_gen= np.var(wt_gen,axis=1)
 var_theo=np.sqrt(beta/(2*np.pi))*np.ones(Time.shape)
 
 

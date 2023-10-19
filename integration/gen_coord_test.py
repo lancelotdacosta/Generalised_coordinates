@@ -1,5 +1,6 @@
 import sympy as sp
 import numpy as np
+from integration.least_action_recovery import generalised_flow_gen,serial_derivs_xt,generalised_flow_eval_2,generalised_flow_eval
 
 
 def sol_gen_coords(F,x,t,x0,tilde_w0):
@@ -17,10 +18,12 @@ def sol_gen_coords(F,x,t,x0,tilde_w0):
 
     [dim,order,N]=tilde_w0.shape
 
-    dxdtn= sp.zeros(dim,order) #initialise serial time derivatives of x for each order and dimension (starting with order 0)
-    for d in range(dim):
-        for o in range(order):
-            dxdtn[d,o]=sp.diff(x[d], (t,o)) #o-th time derivative of the d-th component of the function x(t)
+
+    dxdtn= serial_derivs_xt(x,t,order)
+    #  dxdtn= sp.zeros(dim,order) #initialise serial time derivatives of x for each order and dimension (starting with order 0)
+    # for d in range(dim):
+    #     for o in range(order):
+    #         dxdtn[d,o]=sp.diff(x[d], (t,o)) #o-th time derivative of the d-th component of the function x(t)
 
     tilde_x0= np.empty([dim, order+1, N]) #initialise generalised coordinates at zero of solution to SDE
     tilde_x0[:, 0, :]=x0 #say that order zero is the initial condition
@@ -29,10 +32,11 @@ def sol_gen_coords(F,x,t,x0,tilde_w0):
         if N>=10**2 and n%10**1==0:
             print('Zig zag algorithm-- sample',n,'/',N) #count iterations
 
-        dFdtn = sp.zeros(dim,order) #serial time derivatives of F for each order and dimension (starting with order 0)--sample dependent
-        for d in range(dim):
-            for s in range(order):
-                dFdtn[d,s]=sp.diff(F[d], (t,s)) #s-th time derivative of the d-th component of the function F(x(t))
+        dFdtn = generalised_flow_gen(F,t,order)
+        # dFdtn = sp.zeros(dim,order) #serial time derivatives of F for each order and dimension (starting with order 0)--sample dependent
+        # for d in range(dim):
+        #     for s in range(order):
+        #         dFdtn[d,s]=sp.diff(F[d], (t,s)) #s-th time derivative of the d-th component of the function F(x(t))
 
         # if linearised and order>1:
         #     dFdtn[:, 2:] = sp.zeros(dim,order-2) #in the linearised case ignore all derivatives of order strictly higher than one
