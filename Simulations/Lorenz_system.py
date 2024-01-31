@@ -5,7 +5,7 @@ from Routines import sampling_generalised_noise
 from Routines import colourline
 import matplotlib.pyplot as plt
 from integration import Euler
-from integration import gen_coord, lin_gen_coord
+from integration import zigzag, lin_zigzag
 from Routines import convolving_white_noise
 
 

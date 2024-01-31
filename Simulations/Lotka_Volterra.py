@@ -5,7 +5,7 @@ from Routines import sampling_generalised_noise
 from Routines import colourline
 import matplotlib.pyplot as plt
 from integration import Euler
-from integration import gen_coord, lin_gen_coord, gen_coord_test
+from integration import zigzag, lin_zigzag
 from Routines import convolving_white_noise
 import matplotlib.cm as cm
 
@@ -82,7 +82,7 @@ tilde_w0= epsilon*sampling_generalised_noise.sample_gen_noise_nd(K=K,wrt=h,at=at
 'Part 2a: Getting serial derivatives of solution for each sample at time <at> '
 
 tilde_x0=gen_coord.sol_gen_coords(F,x,t,x0,tilde_w0)
-tilde_x0_test=gen_coord_test.sol_gen_coords(F,x,t,x0,tilde_w0)
+# tilde_x0_test=gen_coord_test.sol_gen_coords(F,x,t,x0,tilde_w0)
 
 'Part 2b: Generating sample paths of solution'
 

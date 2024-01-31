@@ -56,11 +56,14 @@ def sample_gen_noise(K,wrt,at,order,N): #N=number of samples,
 #        samples[:,:,n]=np.outer(spatial_samples[:,n],temporal_samples[:,n])
 #    return samples
 
-
-def sample_gen_noise_nd(K,wrt,at,order,N,dim=1): #dim=Dimension of each order of generalised noise. This is to generate n-dimensional noise that is independent across dimensions
-    #but one could use this function to generate additive noise with spatial covariance S by replacing np.eye(dim) by S
+def gen_covariance_nd(K, wrt, at, order,dim=1):
+    #one could use this function to generate the generalised covariance of additive noise with spatial covariance S by replacing np.eye(dim) by S
     gen_cov = gen_covariance(K, wrt, at, order)
     gen_cov_nd= np.kron(gen_cov,np.eye(dim))
+    return gen_cov_nd
+
+def sample_gen_noise_nd(K,wrt,at,order,N,dim=1): #dim=Dimension of each order of generalised noise. This is to generate n-dimensional noise that is independent across dimensions
+    gen_cov_nd = gen_covariance_nd(K, wrt, at, order,dim)
     samples_temp=np.random.multivariate_normal(mean=np.zeros(order*dim), cov=gen_cov_nd, size=N).T
     samples=np.empty([dim, order, N])
     for o in range(order):
