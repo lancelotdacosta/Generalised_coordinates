@@ -1,5 +1,5 @@
 '''This script takes as input the sequence of time derivatives of a function on the time domain defined at some time point
-And returns the corresponding Taylor polynomial on a specified time grid'''
+And returns the values of the corresponding Taylor polynomial on a specified time grid'''
 
 
 import numpy as np

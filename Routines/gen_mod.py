@@ -2,7 +2,7 @@
 
 import numpy as np
 import sympy as sp
-from Routines import Taylor_series,sampling_generalised_noise,colourline,gen_coords, convolving_white_noise
+from Routines import sampling_generalised_noise,gen_coords, symbolic_algebra
 
 
 
@@ -62,4 +62,30 @@ def genmod_energy(F, x, t, order_x,Kw, hw, g, y, order_y,Kz,hz,  epsilon_w=1, ep
 
 'Free energy under the Laplace approximation for generative model'
 
-# genmod_energy(F, x, t, order_x,Kw, hw, g, y, order_y,Kz,hz,  epsilon_w=1, epsilon_z=1, lin=True, trun=True)
+def log_det_hess(generative_energy_genmu,genmu):
+    'Log determinant term of the Hessian of the generative energy'
+    # First compute Hessian of generative Energy
+    Hess_gen_energy = gen_coords.gen_Hessian(generative_energy_genmu, genmu)
+    # compute log determinant
+    det_Hess_GE = symbolic_algebra.sympy_det(Hess_gen_energy)
+    log_det_Hess_GE= det_Hess_GE.applyfunc(sp.log)
+    return log_det_Hess_GE
+
+def free_energy_laplace(generative_energy_genmu,log_det_Hess_GE):
+
+    '''THIS RETURNS THE FREE ENERGY WITH OPTIMAL COVARIANCE UNDER THE LAPLACE APPROXIMATION
+    DID NOT IMPLEMENT FREE ENERGY UNDER THE LOCAL LINEAR ASSUMPTION,
+    IE I DO NOT IGNORE SECOND ORDER DERIVATIVES OF THE FLOWS THAT ARISE IN THE HESSIAN'''
+
+    #return free energy with optimal covariance under the Laplace approximation- up to a different constant
+    return  generative_energy_genmu + log_det_Hess_GE /2
+
+
+'''Free energy gradients'''
+
+def grad_free_energy_laplace(FE_laplace,generative_energy_genmu,genmu,lin=True):
+    if lin:
+        ''' DID NOT IMPLEMENT CHANGES IN THE ENERGY GRADIENT THAT ARISE FROM THE LINEARISED JACOBIANS OF THE FLOWS'''
+        return gen_coords.gen_gradient(generative_energy_genmu, genmu)
+    else:
+        return gen_coords.gen_gradient(FE_laplace, genmu)

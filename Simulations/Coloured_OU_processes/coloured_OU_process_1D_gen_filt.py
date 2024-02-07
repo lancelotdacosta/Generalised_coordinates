@@ -1,31 +1,32 @@
 '''Here we do gen filt of the one dimensional OU process with smooth noise
-and a non linear observation function'''
+and a non-linear observation function'''
 
 import numpy as np
 import sympy as sp
-from Routines import Taylor_series,sampling_generalised_noise,colourline,gen_coords, convolving_white_noise,gen_mod
+from Routines import colourline,gen_coords, convolving_white_noise,gen_mod, gen_filt_eval,symbolic_algebra,data_embedding
 import matplotlib.pyplot as plt
-from integration import Euler, gen_descent_Lag, lin_zigzag
-from scipy.linalg import expm
-import time
+from integration import Euler, gen_descent_Lag, gen_filt
 
 '''Parameters of the method'''
 
 # seed
 np.random.seed(0)
-# local linearisation
-local_lin = False
+# linearisation method
+meth_lin='local' #'local' or 'hybrid' or 'none'
+# 'local' linearises the flows through the local linear approximation and ignores the Hessian term in the free energy gradient
+# 'hybrid' does not linearise the flows but ignores the Hessian term in the free energy gradient
+# 'none' is the full non-linearised method
 # choice of data assimilation and augmentation method
 meth_data = 'Taylor' #choices: 'findiff' or 'Taylor'
 # computing covariance, ie uncertainty of inference
 cov=True
 # integration method
-meth_int= 'RK45' #choices: 'Euler' or 'adaptive_Euler' or 'Heun' or 'RK45'
+meth_int= 'RK45' #choices: 'Euler' or 'Heun' or 'RK45' (best is RK45)
 # computing free energy over time
 fe_time=True
-# figure number
+# first figure number
 figno=1
-# scaling of free energy gradient in gradient descent
+# scaling of free energy gradient in gradient descent (just for testing purposes)
 beta=1
 
 '''The state space model: OU process with additive smooth Gaussian noise'''
@@ -122,13 +123,11 @@ zt_conv = epsilon_z*convolving_white_noise.white_noise_conv_Gaussian_kernel_nd(d
 #add Observation noise to the time series, to obtain observation time series
 yt=gxt+zt_conv
 
-
 '''The generative model: given as an energy function (i.e. negative log probability)'''
 
 'Part 3a: Specifying the prior Parameters'
 
 order_x=6 #Number of orders of motion on the prior generative model
-
 
 'Part 3b: Specifying The likelihood Parameters'
 
@@ -139,8 +138,12 @@ y= sp.Matrix([sp.Function("y0")(t)])
 
 'Part 3c: The total energy of the generative model'
 
-generative_energy=gen_mod.genmod_energy(F,x,t,order_x,Kw,hw,g,y,order_y,Kz,hz,epsilon_w,epsilon_z,lin=local_lin,trun=True)
+if meth_lin=='hybrid' or meth_lin=='none': #'local' or 'hybrid' or 'none'
+    lin_flow = False
+elif meth_lin=='local':
+    lin_flow = True
 
+generative_energy=gen_mod.genmod_energy(F,x,t,order_x,Kw,hw,g,y,order_y,Kz,hz,epsilon_w,epsilon_z,lin=lin_flow,trun=True)
 
 '''The variational free energy with optimal covariance under the Laplace approximation'''
 #This is a function of the generalized mean tilde mu
@@ -154,11 +157,10 @@ mu= sp.Matrix([sp.Function("mu0")(t)])
 # This is the generalized mean
 genmu= gen_coords.serial_derivs_xt(mu, t, order_x + 1)  # shape [dim_x,order+1]
 
-# Symbolic vector of generalized coordinates for the states
-genx = gen_coords.serial_derivs_xt(x, t, order_x + 1)  # shape [dim_x,order+1]
-
 'Replacement of genx/tildex in the generative energy by genmu/tildemu'
 
+# Symbolic vector of generalized coordinates for the states
+genx = gen_coords.serial_derivs_xt(x, t, order_x + 1)  # shape [dim_x,order+1]
 # This is the generative energyEvaluatedAt the generalized meanAnd the generalized data
 generative_energy_genmu = gen_coords.gen_coord_replace(generative_energy, genx, genmu)
 
@@ -166,49 +168,17 @@ generative_energy_genmu = gen_coords.gen_coord_replace(generative_energy, genx, 
 # the last order of motion of x or mu is not present there,
 # However it will come up in the D term when we do the generalized gradient descent later
 
-def sympy_det(M):
-    dim=M.shape[0]
-    if dim==1:
-        return M#sp.Matrix([M])
-    else:
-        det_M=sp.Matrix([0])
-        col = range(1,dim)
-        for r in range(dim):
-            # print(r)
-            row=[i for i in range(dim) if i != r]
-            det_M += (-1)**r * M[r,0] * sympy_det(M[row,col])
-        return det_M
-
-def log_det_hess(generative_energy_genmu,genmu):
-    'Log determinant term of the Hessian of the generative energy'
-    # First compute Hessian of generative Energy
-    Hess_gen_energy = gen_coords.gen_Hessian(generative_energy_genmu, genmu)
-    # compute log determinant
-    det_Hess_GE = sympy_det(Hess_gen_energy)
-    log_det_Hess_GE= det_Hess_GE.applyfunc(sp.log)
-    return log_det_Hess_GE
-def free_energy_laplace(generative_energy_genmu,log_det_Hess_GE):
-
-    '''THIS RETURNS THE FREE ENERGY WITH OPTIMAL COVARIANCE UNDER THE LAPLACE APPROXIMATION
-    DID NOT IMPLEMENT FREE ENERGY UNDER THE LOCAL LINEAR ASSUMPTION,
-    IE I DO NOT IGNORE SECOND ORDER DERIVATIVES OF THE FLOWS THAT ARISE IN THE HESSIAN'''
-
-    #return free energy with optimal covariance under the Laplace approximation- up to a different constant
-    return  generative_energy_genmu + log_det_Hess_GE /2
-
-log_det_Hess_GE =log_det_hess(generative_energy_genmu,genmu)
-FE_laplace= free_energy_laplace(generative_energy_genmu,log_det_Hess_GE)
+log_det_Hess_GE =gen_mod.log_det_hess(generative_energy_genmu,genmu)
+FE_laplace= gen_mod.free_energy_laplace(generative_energy_genmu,log_det_Hess_GE)
 
 '''Free energy gradients'''
 
-def grad_free_energy_laplace(FE_laplace,generative_energy_genmu,genmu,lin=True):
-    if lin:
-        ''' DID NOT IMPLEMENT CHANGES IN THE ENERGY GRADIENT THAT ARISE FROM THE LINEARISED JACOBIANS OF THE FLOWS'''
-        return gen_coords.gen_gradient(generative_energy_genmu, genmu)
-    else:
-        return gen_coords.gen_gradient(FE_laplace, genmu)
+if meth_lin=='hybrid' or meth_lin=='local': #'local' or 'hybrid' or 'none'
+    ignore_Hessian_in_grad = True
+elif meth_lin=='none':
+    ignore_Hessian_in_grad = False
 
-grad_FE=grad_free_energy_laplace(FE_laplace,generative_energy_genmu,genmu,lin=local_lin)
+grad_FE=gen_mod.grad_free_energy_laplace(FE_laplace,generative_energy_genmu,genmu,lin=ignore_Hessian_in_grad)
 
 '''Flow of generalised gradient on free energy'''
 
@@ -216,347 +186,14 @@ flow_gen_gd_FE = gen_descent_Lag.flow_gengd_Lag(beta*grad_FE, genmu)
 
 '''Data embedding in generalised coordinates'''
 
-'Method 1: finite differences'
-
-if meth_data=='findiff':
-    yt_embedded = np.zeros([dim_y, order_y + 1, timesteps, N])
-
-    yt_embedded[:, 0, :, :] = yt
-
-    for o in range(1, order_y + 1):
-        for tau in range(1, timesteps):
-            yt_embedded[:, o, tau, :] = (yt_embedded[:, o - 1, tau, :] - yt_embedded[:, o - 1, tau - 1, :]) / (
-                        Time[tau] - Time[tau - 1])
-
-'Method 2: inverting Taylor expansion'
-
-if meth_data=='Taylor':
-
-    #Build taylor expansion coefficients
-    def Taylor_coeffs(dt,order_y):
-        coeffs=np.ones([order_y+1])
-        for o in range(1,order_y+1):
-            coeffs[o]=coeffs[o-1]*dt/o
-        return coeffs
-
-     # build taylor expansion matrix
-    def Taylor_matrix(dt, order_y):
-        T_mx = np.empty([order_y + 1,order_y + 1])
-        for o in range(order_y + 1):
-            T_mx[o] = Taylor_coeffs(dt*(order_y-o),order_y)
-        return T_mx
-
-    T_mx=Taylor_matrix(-dt, order_y)
-    inv_T_mx=np.linalg.inv(T_mx)
-
-    yt_embedded=np.zeros([dim_y,order_y+1,timesteps,N])
-
-    for tau in range(timesteps):
-        for d in range(dim_y):
-                if tau < order_y:
-                    temp=np.tile(yt[d,0,:],order_y-tau).reshape([order_y-tau,N])
-                    hist = np.concatenate([temp,yt[d, :tau + 1, :]])
-                else:
-                    hist= yt[d,tau-order_y:tau+1,:]
-                yt_embedded[d, :, tau, :] = inv_T_mx @ hist
-
+yt_embedded = data_embedding.embed_data(yt, Time, order_y,meth_data)
 
 '''Generalised filtering'''
-
-
-def Euler_gen_filt(genFlow,Time,yt_embedded,geny,genmu):
-    # method developed for filtering ONE sample path only
-    # print('=Euler integration for generalised filtering=')
-
-    [dim_x,order_x_pone]=genmu.shape
-    [dim_y,order_y_pone,T]=yt_embedded.shape
-
-    'Initialise means'
-    genmut = np.zeros([dim_x, order_x_pone, T])
-    # genmut[:, :, 0] = yt_embedded[:, :, 0]
-
-    'setup function'
-    input_sympy= genmu.row_join(geny)
-    genF_lambdify = sp.lambdify(input_sympy, genFlow, "numpy")
-
-    for t in range(1,T):
-        if t % 10**5 == 0:
-             print(t, '/', T)
-        step=Time[t]-Time[t-1]
-        input_numpy = np.concatenate((genmut[:,:,t-1],yt_embedded[:,:,t-1]),axis=1)
-        genmut[:,:,t]=genmut[:,:,t-1] + step * genF_lambdify(*input_numpy.ravel())
-    return genmut
-
-def Heun_gen_filt(genFlow,Time,yt_embedded,geny,genmu):
-    # method developed for filtering ONE sample path only
-    # print('=Heun integration for generalised filtering=')
-
-    [dim_x,order_x_pone]=genmu.shape
-    [dim_y,order_y_pone,T]=yt_embedded.shape
-
-    'Initialise means'
-    genmut = np.zeros([dim_x, order_x_pone, T])
-    # genmut[:, :, 0]=yt_embedded[:, :, 0]
-
-    'setup function'
-    input_sympy= genmu.row_join(geny)
-    genF_lambdify = sp.lambdify(input_sympy, genFlow, "numpy")
-
-    for t in range(1,T):
-        # if t % 10**5 == 0:
-        #      print(t, '/', T)
-        h=Time[t]-Time[t-1]
-        input_numpy = np.concatenate((genmut[:,:,t-1],yt_embedded[:,:,t-1]),axis=1)
-        temp_F=genF_lambdify(*input_numpy.ravel())
-        temp_genmut = genmut[:,:,t-1] + h * temp_F
-        input_numpy= np.concatenate((temp_genmut,yt_embedded[:,:,t-1]),axis=1)
-        genmut[:, :, t] = (genmut[:, :, t - 1] + \
-                           h/2 * (genF_lambdify(*input_numpy.ravel())+temp_F))
-    return genmut
-
-
-def linear_interpolation(genmut_variable,Times_variable,Time):
-    # this function linearly interpolates the solution to the RK45 algorithm, ie (genmut_variable,Times_variable)
-    # to obtain the solution on a different, eg coarser, time grid, ie Time.
-    # print('=Linear interpolation of RK45 solution=')
-
-    [dim_x,order_x_pone]=genmut_variable.shape[:2]
-    T=Time.shape[0]
-
-    'Initialise means'
-    genmut = np.empty([dim_x, order_x_pone, T])
-
-    for i in range(T):
-        'find time in time variable'
-        t= Time[i]
-        index = np.sum(Times_variable <= t)-1 #index in Times_variable
-        tau = Times_variable[index]  #preceding time in Times_variable
-        'find time in time variable'
-        if tau == t:
-            genmut[:,:,i]=genmut_variable[:,:,index]
-        elif tau < t:
-            # index2 = np.argmax(Times_variable  t)
-            nextau= Times_variable[index+1] #subsequent time in Times_variable
-            genmut[:, :, i] = (genmut_variable[:, :, index]*(t-tau)+genmut_variable[:, :, index+1]*(nextau-t))/(nextau-tau)
-
-    return genmut
-
-
-def RK45_gen_filt(genFlow,Time,yt_embedded,geny,genmu, tol=1e-2 , hmax=1e-1, hmin=1e-6):
-    # method developed for filtering ONE sample path only
-    # print('=RK45 integration for generalised filtering=')
-
-    [dim_x,order_x_pone]=genmu.shape
-    [dim_y,order_y_pone,T]=yt_embedded.shape
-
-    'setup function'
-    input_sympy= genmu.row_join(geny)
-    genF_lambdify = sp.lambdify(input_sympy, genFlow, "numpy")
-
-    'parameters of the RK45 method'
-    # weightings for time variable
-    # a2 = 2.500000000000000e-01  # 1/4
-    # a3 = 3.750000000000000e-01  # 3/8
-    # a4 = 9.230769230769231e-01  # 12/13
-    # a5 = 1.000000000000000e+00  # 1
-    # a6 = 5.000000000000000e-01  # 1/2
-
-    # weightings for space variable
-    b21 = 2.500000000000000e-01  # 1/4
-    b31 = 9.375000000000000e-02  # 3/32
-    b32 = 2.812500000000000e-01  # 9/32
-    b41 = 8.793809740555303e-01  # 1932/2197
-    b42 = -3.277196176604461e+00  # -7200/2197
-    b43 = 3.320892125625853e+00  # 7296/2197
-    b51 = 2.032407407407407e+00  # 439/216
-    b52 = -8.000000000000000e+00  # -8
-    b53 = 7.173489278752436e+00  # 3680/513
-    b54 = -2.058966861598441e-01  # -845/4104
-    b61 = -2.962962962962963e-01  # -8/27
-    b62 = 2.000000000000000e+00  # 2
-    b63 = -1.381676413255361e+00  # -3544/2565
-    b64 = 4.529727095516569e-01  # 1859/4104
-    b65 = -2.750000000000000e-01  # -11/40
-
-    # weightings for the truncation error estimate
-    r1 = 2.777777777777778e-03  # 1/360
-    r3 = -2.994152046783626e-02  # -128/4275
-    r4 = -2.919989367357789e-02  # -2197/75240
-    r5 = 2.000000000000000e-02  # 1/50
-    r6 = 3.636363636363636e-02  # 2/55
-
-    # weightings for the solution
-    c1 = 1.157407407407407e-01  # 25/216
-    c3 = 5.489278752436647e-01  # 1408/2565
-    c4 = 5.353313840155945e-01  # 2197/4104
-    c5 = -2.000000000000000e-01  # -1/5
-
-    'Starting parameters'
-    Tmax=np.max(Time) #Max time
-    h=hmax #initial timestep, and defines current timestep
-    t=0.0 #initial time, and defines current time
-
-    genmut_variable = np.zeros([dim_x, order_x_pone, 1]) #yt_embedded[:,:,0] #initialise means
-    Times_variable=   np.array([0]) #initialise vector of times
-
-    while t < Tmax:
-
-        'Find the current timestep in the original time grid'
-        # this is to get the last observation of data
-        o_index= np.sum(Time <= t)-1
-
-        'set up timestep'
-        if t + h > Tmax:
-            h = Tmax - t
-
-        'trapezoidal rule inputs'
-        input_numpy = np.concatenate((genmut_variable[:,:,-1], yt_embedded[:,:,o_index]),axis=1)
-        k1 = h * genF_lambdify(*input_numpy.ravel())
-
-        input_numpy = np.concatenate((genmut_variable[:,:,-1]+ b21 * k1,\
-                                       yt_embedded[:,:,o_index]),axis=1)
-        k2 = h * genF_lambdify(*input_numpy.ravel())
-
-        input_numpy = np.concatenate((genmut_variable[:,:,-1]+ b31 * k1 + b32 * k2,\
-                                       yt_embedded[:,:,o_index]),axis=1)
-        k3 = h * genF_lambdify(*input_numpy.ravel())
-
-        input_numpy = np.concatenate((genmut_variable[:, :, -1] + b41 * k1 + b42 * k2 + b43 * k3, \
-                                       yt_embedded[:, :, o_index]), axis=1)
-        k4 = h * genF_lambdify(*input_numpy.ravel())
-
-        input_numpy = np.concatenate((genmut_variable[:, :, -1] + b51 * k1 + b52 * k2 + b53 * k3 + b54 * k4, \
-                                       yt_embedded[:, :, o_index]), axis=1)
-        k5 = h * genF_lambdify(*input_numpy.ravel())
-
-        input_numpy = np.concatenate((genmut_variable[:, :, -1] + b61 * k1 + b62 * k2 + b63 * k3 + b64 * k4 + b65 * k5, \
-                                       yt_embedded[:, :, o_index]), axis=1)
-        k6 = h * genF_lambdify(*input_numpy.ravel())
-
-        # estimate of truncation error accross each order and dimension
-        r = abs(r1 * k1 + r3 * k3 + r4 * k4 + r5 * k5 + r6 * k6)
-
-        # take the maximum error along all orders and dimensions
-        if r.size > 0:
-            r = np.max(r)
-
-        if r<=tol: #in which case we accept the step (tol is the error tolerance per step)
-            t = t + h #increase time by timestep
-            temp = genmut_variable[:, :, -1] + c1 * k1 + c3 * k3 + c4 * k4 + c5 * k5 #estimate of solution
-            Times_variable = np.append(Times_variable, t)
-            genmut_variable = np.concatenate((genmut_variable, temp.reshape([temp.shape[0],temp.shape[1],1])), 2)
-
-        # set up new timestep
-        h = 0.9* h * (tol/r)**0.2
-        if h > hmax:
-            h = hmax
-        elif h < hmin:# and Tmax -t >= hmin:
-            # raise RuntimeError("Error: Could not converge to the required tolerance.")
-            # break
-            if Tmax -t > h:
-                print("Warning: Could not converge to the required tolerance.")
-            h = hmin
-
-    # return linear_interpolation(genmut_variable,Times_variable,Time)
-    return genmut_variable, Times_variable
-# def adaptive_Euler_gen_filt(genFlow,Time,yt_embedded,geny,genmu):
-#     # method developed for filtering ONE sample path only
-#     print('=adaptive Euler integration for generalised filtering=')
-#
-#     [dim_x,order_x_pone]=genmu.shape
-#     [dim_y,order_y_pone,T]=yt_embedded.shape
-#
-#     'Initialise means'
-#     genmut = np.zeros([dim_x, order_x_pone, T])
-#
-#     'setup function'
-#     input_sympy= genmu.row_join(geny)
-#     genF_lambdify = sp.lambdify(input_sympy, genFlow, "numpy")
-#
-#     'parameters for adaptive step size'
-#     time=0 #continuous time
-#     prev_t=0
-#     t=0
-#     iters=0
-#     tol=10*Time.size
-#     genmu_inst=genmut[:,:,0] #instantaneous genmu
-#     genmu_inst_prev = genmut[:, :, 0]
-#     while time < Time[T]:
-#         # figure out between which indices we are in the time interval (t<=time<t+1)
-#         # also figures out whether we just went past a t (indicated by 'update')
-#         indices=Time<=time
-#         new_t=np.sum(indices)-1
-#         if new_t>t:
-#             update = True
-#         elif new_t==t:
-#             update = False
-#         else:
-#             raise TypeError('update')
-#         t = new_t
-#         # prepare the input for the flow
-#         input_numpy = np.concatenate((genmu_inst,yt_embedded[:,:,t]),axis=1)
-#         # flow output
-#         F_output=genF_lambdify(*input_numpy.ravel())
-#         # define time step size
-#         step = (Time[t+1] - Time[t])/np.sum(np.abs(F_output))
-#         # update
-#         genmu_inst = genmu_inst_prev + step * F_output
-#         # if need to update genmut
-#         if update:
-#             for i in range(prev_t,t):
-#                 genmut[:, :, t - 1]=genmu_inst_prev
-#         'TODO THIS NEEDS A RETHINK'
-#
-#     for t in range(1,T):
-#         step = Time[t] - Time[t - 1]
-#         input_numpy = np.concatenate((genmut[:,:,t-1],yt_embedded[:,:,t-1]),axis=1)
-#         genmut[:,:,t]=genmut[:,:,t-1] + step * genF_lambdify(*input_numpy.ravel())
-#     return genmut
-
-
-def integrator_gen_filt_N_samples(genFlow,Time,yt_embedded,geny,genmu,methint='Euler'):
-
-    print(f'===={methint} integration for generalised filtering====')
-
-    [dim_x,order_x_pone]=genmu.shape
-    [dim_y,order_y_pone,T,N]=yt_embedded.shape
-
-    'Initialise means'
-    # genmut = np.empty([dim_x, order_x_pone, T,N])
-    genmut=[None] * N
-
-    'Initialise time grid'
-    # some integration methods have an adaptive step size and return their own time grid
-    Time_gf=[None] * N
-
-    'Do generalised filtering for each sample'
-    for n in range(N):
-        if n>2:
-            print(f'---Sample {n}---')
-        if methint== 'Euler':
-            genmut[n] = Euler_gen_filt(genFlow,Time,yt_embedded[:,:,:,n],geny,genmu)
-            Time_gf[n]=Time
-        # elif methint=='adaptive_Euler':
-        #     genmut[:, :, :, n] = adaptive_Euler_gen_filt(genFlow, Time, yt_embedded[:, :, :, n], geny, genmu)
-        elif methint == 'Heun':
-            genmut[n] = Heun_gen_filt(genFlow, Time, yt_embedded[:, :, :, n], geny, genmu)
-            Time_gf[n]=Time
-        elif methint=='RK45':
-            hmax=np.max(Time[1:]-Time[:-1])
-            genmut[n],Time_gf[n] = RK45_gen_filt(genFlow, Time, yt_embedded[:, :, :, n], geny, genmu, hmax=hmax,tol=1e-2)
-        else: # If an exact match is not confirmed, this last case will be used if provided
-            raise TypeError('integrator not yet supported')
-
-        'THIS IS TO NOT COMPUTE SAMPLE 2 TO MAKE THINGS FASTER. CAN REMOVE THIS'
-        if N==2: break
-
-    return genmut, Time_gf
 
 geny = gen_coords.serial_derivs_xt(y, t, order_y + 1)  # shape [dim_x,order+1]
 
 # Generalised filtering
-genmut, Time_gf= integrator_gen_filt_N_samples(flow_gen_gd_FE,Time,yt_embedded,geny,genmu,methint=meth_int)
-
+genmut, Time_gf= gen_filt.integrator_gen_filt_N_samples(flow_gen_gd_FE,Time,yt_embedded,geny,genmu,methint=meth_int)
 
 'Visualisation'
 
@@ -573,7 +210,7 @@ alpha=0.3
 plt.figure(figno)
 plt.clf()
 plt.suptitle(f'1D Coloured OU process', fontsize=16)
-plt.title(f'Local linear: {local_lin}, Data embedding: {meth_data}, Integration: {meth_int}', fontsize=12)
+plt.title(f'Linearisation: {meth_lin}, Data embedding: {meth_data}, Integration: {meth_int}', fontsize=12)
 plt.plot(Time[plot_indices],xt_Euler_conv[0,plot_indices,n],label='Latent')
 plt.plot(Time[plot_indices],yt[0,plot_indices,n],linestyle=':',label='Observation')
 plt.plot(Time_gf[n],genmut[n][0,0,:],label='Inference')
@@ -582,96 +219,17 @@ plt.plot(Time_gf[n],genmut[n][0,0,:],label='Inference')
 # plt.ylim([-1,2])
 plt.legend()
 
-
-# print(f'MSE={np.sum((xt_Euler_conv[0,:,n]-mut_nonlinear)**2)/Time.size}')
-
-
-# plt.figure(0)
-# plt.clf()
-# plt.suptitle(f'1D Coloured OU process', fontsize=16)
-# plt.title(f'Local linear: {local_lin}, Data embedding: {meth_data}, Integration: {meth_int}', fontsize=12)
-# plt.plot(Time,xt_Euler_conv[0,:,n],label='Latent')
-# plt.plot(Time,yt[0,:,n],linestyle=':',label='Observation')
-# plt.plot(Times_variable,genmut_variable[0,0,:],label='Inference')
-# # plt.plot(Time,linear_interpolation(genmut_variable,Times_variable,Time)[0,0,:],label='Inference2')
-# # colourline.plot_cool(Time[plot_indices],mut_order0[0,plot_indices,n], lw=1,alpha=alpha)
-# plt.legend()
-
-
 '''Covariance dynamics'''
-
-def gen_filt_cov_N_samples(Hess_gen_energy,Time_gf,genmut,genmu,Time,yt_embedded,geny):
-    'DID NOT IMPLEMENT CHANGES IN COVARIANCE THAT ARISE FROM THE LOCAL LINEARISATION'
-
-    print('====Gen filt cov====')
-
-    # [dim_x,order_x_pone]=genmu.shape
-    N=len(genmut)
-
-    input_sympy = genmu.row_join(geny)
-    Hess_lambdify = sp.lambdify(input_sympy, Hess_gen_energy, "numpy")
-
-    gencovt_flatenned=[None]*N
-
-    for n in range(N):
-        T = Time_gf[n].size
-        shape_gencovt_flatenned = list(Hess_gen_energy.shape) + [T]
-        gencovt_flatenned[n]=np.empty(shape_gencovt_flatenned)
-        for t in range(T):
-            # if t % 10 ** 5 == 0:
-            #     print(t, '/', T)
-            o_index = np.sum(Time <= t) - 1
-            input_numpy = np.concatenate((genmut[n][:, :, t], yt_embedded[:, :, o_index, n]), axis=1)
-            gencovt_flatenned[n][:,:,t]=np.linalg.inv(Hess_lambdify(*input_numpy.ravel()))
-        'THIS IS INTRODUCED TO NOT COMPUTE SAMPLE 2 TO MAKE THINGS FASTER. CAN REMOVE THIS'
-        if N==2: break
-
-    return gencovt_flatenned
-
-def gen_filt_cov_N_samples_order0(Hess_gen_energy,Time_gf,genmut,genmu,Time,yt_embedded,geny):
-    # this is only the covariance at order zero for all times and all samples as this is the one we will plot later
-    gencovt_flatenned=gen_filt_cov_N_samples(Hess_gen_energy,Time_gf,genmut,genmu,Time,yt_embedded,geny)
-    N = len(genmut)
-    dim_x = genmu.shape[0]
-    gencovt_flatenned_order0=[None]*N
-    for n in range(N):
-        gencovt_flatenned_order0[n]=gencovt_flatenned[n][:dim_x,:dim_x,:]
-        'THIS IS INTRODUCED TO NOT COMPUTE SAMPLE 2 TO MAKE THINGS FASTER. CAN REMOVE THIS'
-        if N == 2: break
-    return gencovt_flatenned_order0
-
-def meaningful_cov(gencovt):
-    N=len(gencovt)
-    for n in range(N):
-        less_zero= gencovt[n]<0
-        gencovt[n][less_zero]=np.nan
-        'THIS IS INTRODUCED TO NOT COMPUTE SAMPLE 2 TO MAKE THINGS FASTER. CAN REMOVE THIS'
-        if N == 2: break
-    return gencovt
-
-def meaningful_std(gencovt):
-    N=len(gencovt)
-    gencovt=meaningful_cov(gencovt)
-    for n in range(N):
-        gencovt[n]=np.sqrt(gencovt[n])
-        'THIS IS INTRODUCED TO NOT COMPUTE SAMPLE 2 TO MAKE THINGS FASTER. CAN REMOVE THIS'
-        if N == 2: break
-    return gencovt
-
-
-
 
 if cov:
     Hess_gen_energy=gen_coords.gen_Hessian(generative_energy_genmu,genmu)
-    gencovt = gen_filt_cov_N_samples_order0(Hess_gen_energy, Time_gf,genmut,genmu,Time,yt_embedded,geny)
-    genstd = meaningful_std(gencovt)
-    # meaningful_indices=gencovt[n][0,0,:]>=0
-    # meaningful_cov=np.maximum(gencovt[n],np.zeros(gencovt[n].shape))
+    gencovt = gen_filt_eval.gen_filt_cov_N_samples_order0(Hess_gen_energy, Time_gf,genmut,genmu,Time,yt_embedded,geny)
+    genstd = gen_filt_eval.meaningful_std(gencovt) #standard deviation
 
     plt.figure(figno+6)
     plt.clf()
     plt.suptitle(f'Inference with uncertainty', fontsize=16)
-    plt.title(f'Local linear: {local_lin}, Data embedding: {meth_data}, Integration: {meth_int}', fontsize=12)
+    plt.title(f'Linearisation: {meth_lin}, Data embedding: {meth_data}, Integration: {meth_int}', fontsize=12)
     plt.plot(Time[plot_indices], xt_Euler_conv[0, plot_indices, n], label='Latent')
     plt.plot(Time[plot_indices], yt[0, plot_indices, n], linestyle=':', label='Observation')
     plt.plot(Time_gf[n],genmut[n][0,0,:], label='Inference')
@@ -679,63 +237,33 @@ if cov:
     plt.ylim([-0.7,2])
     plt.legend()
 
-    'test code henceforth'
+    'Plot of covariance'
 
-    Time_gf[n].size
-    np.max(gencovt[n][0, 0, :])
-    np.mean(gencovt[n][0, 0, :]) #negative
-    np.nanmax(gencovt[n][0, 0, :])
-    np.nanmean(gencovt[n][0, 0, :])
+    # Time_gf[n].size
+    # np.max(gencovt[n][0, 0, :])
+    # np.mean(gencovt[n][0, 0, :]) #negative
+    # np.nanmax(gencovt[n][0, 0, :])
+    # np.nanmean(gencovt[n][0, 0, :])
 
     plt.figure(figno + 7)
     plt.clf()
-    plt.suptitle(f'Covariance', fontsize=16)
-    plt.title(f'Local linear: {local_lin}, Data embedding: {meth_data}, Integration: {meth_int}', fontsize=12)
+    plt.suptitle(f'Covariance value', fontsize=16)
+    plt.title(f'Linearisation: {meth_lin}, Data embedding: {meth_data}, Integration: {meth_int}', fontsize=12)
     plt.plot(Time_gf[n], gencovt[n][0, 0, :], label='Covariance')
     plt.plot(Time_gf[n], np.zeros(Time_gf[n].shape), label='Zero',lw=0.2)
     plt.legend()
 
-
-
-
-
 '''Free energy dynamics'''
-# look at free energy over time
-
-def FEt_N_samples(FE,Time_gf,genmut,genmu,Time,yt_embedded,geny):
-    print('====FE over time====')
-
-    N=len(genmut)
-
-    'Initialise list of values for the free energy over time'
-    FEt=[None]*N
-
-    input_sympy = genmu.row_join(geny)
-    FE = sp.lambdify(input_sympy, FE, "numpy")
-
-    for n in range(N):
-        T=Time_gf[n].size
-        FEt[n]=np.empty(T)
-        for t in range(T):
-            # this is to get the last observation of data
-            o_index = np.sum(Time <= t) - 1
-            input_numpy = np.concatenate((genmut[n][:, :, t], yt_embedded[:, :, o_index, n]), axis=1)
-            FEt[n][t]=FE(*input_numpy.ravel())
-            # if np.isnan(FEt[n][t]):
-            #     print(f't{t},n{n}')
-        'THIS IS INTRODUCED TO NOT COMPUTE SAMPLE 2 TO MAKE THINGS FASTER. CAN REMOVE THIS'
-        if N==2: break
-
-    return FEt
+# free energy and subcomponents over time
 
 if fe_time:
     'Free energy over time'
-    FEt =  FEt_N_samples(FE_laplace,Time_gf,genmut,genmu,Time,yt_embedded,geny)
+    FEt =  gen_filt_eval.F_over_t(FE_laplace,Time_gf,genmut,genmu,Time,yt_embedded,geny)
 
     plt.figure(figno+1)
     plt.clf()
     plt.suptitle(f'Free energy', fontsize=16)
-    plt.title(f'Local linear: {local_lin}, Data embedding: {meth_data}, Integration: {meth_int}', fontsize=12)
+    plt.title(f'Linearisation: {meth_lin}, Data embedding: {meth_data}, Integration: {meth_int}', fontsize=12)
     plt.plot(Time[plot_indices], xt_Euler_conv[0, plot_indices, n], label='Latent')
     plt.plot(Time[plot_indices], yt[0, plot_indices, n], linestyle=':', label='Observation')
     plt.plot(Time_gf[n],genmut[n][0,0,:], label='Inference')
@@ -743,13 +271,13 @@ if fe_time:
     # plt.ylim([-10, 8])
 
     'Free energy components over time'
-    gen_energy_t =  FEt_N_samples(generative_energy_genmu,Time_gf,genmut,genmu,Time,yt_embedded,geny)
-    log_det_Hess_t=FEt_N_samples(log_det_Hess_GE,Time_gf,genmut,genmu,Time,yt_embedded,geny)
+    gen_energy_t =  gen_filt_eval.F_over_t(generative_energy_genmu,Time_gf,genmut,genmu,Time,yt_embedded,geny)
+    log_det_Hess_t=gen_filt_eval.F_over_t(log_det_Hess_GE,Time_gf,genmut,genmu,Time,yt_embedded,geny)
 
     plt.figure(figno+2)
     plt.clf()
     plt.suptitle(f'Free energy components', fontsize=16)
-    plt.title(f'Local linear: {local_lin}, Data embedding: {meth_data}, Integration: {meth_int}', fontsize=12)
+    plt.title(f'Linearisation: {meth_lin}, Data embedding: {meth_data}, Integration: {meth_int}', fontsize=12)
     # plt.plot(Time[plot_indices], xt_Euler_conv[0, plot_indices, n], label='Latent')
     # plt.plot(Time[plot_indices], yt[0, plot_indices, n], linestyle=':', label='Observation')
     # plt.plot(Time[plot_indices], mut_order0[0, plot_indices, n], label='Inference')
@@ -761,39 +289,28 @@ if fe_time:
 
     'Determinant of Hessian'
     Hess_gen_energy = gen_coords.gen_Hessian(generative_energy_genmu, genmu)
-    det_Hess_GE = sympy_det(Hess_gen_energy)
-    det_Hess_t = FEt_N_samples(det_Hess_GE, Time_gf, genmut, genmu, Time, yt_embedded, geny)
+    det_Hess_GE = symbolic_algebra.sympy_det(Hess_gen_energy)
+    det_Hess_t = gen_filt_eval.F_over_t(det_Hess_GE, Time_gf, genmut, genmu, Time, yt_embedded, geny)
     np.sum(det_Hess_t[n][plot_indices] <= 0)
 
     plt.figure(figno + 3)
     plt.clf()
     plt.suptitle(f'det Hess', fontsize=16)
-    plt.title(f'Local linear: {local_lin}, Data embedding: {meth_data}, Integration: {meth_int}', fontsize=12)
+    plt.title(f'Linearisation: {meth_lin}, Data embedding: {meth_data}, Integration: {meth_int}', fontsize=12)
     plt.plot(Time_gf[n], det_Hess_t[n], label='det Hess')
     plt.legend()
 
     'Free energy gradient norm'
-    # def sympy_norm(v):
-    #     v=v.applyfunc(lambda e: e ** 2)
-    #
-    #     norm=sp.sqrt(sp.Sum(sp.Sum(v[i,j],(i, 1, v.shape[0])), (j, 1, v.shape[1])))
-    #
-    #     for i in range(v.shape[0]):
-    #         for j in range(v.shape[1]):
-    #             print(i,j)
-    #             norm+=v[i,j]**2
-    #     norm=sp.simplify(norm)
-    #     return norm.applyfunc(sp.sqrt)
 
     grad_FE_norm=grad_FE.norm(1)
-    grad_FE_norm_t = FEt_N_samples(grad_FE_norm, Time_gf, genmut, genmu, Time, yt_embedded, geny)
+    grad_FE_norm_t = gen_filt_eval.F_over_t(grad_FE_norm, Time_gf, genmut, genmu, Time, yt_embedded, geny)
     flow_gen_gd_FE_norm=flow_gen_gd_FE.norm(1)
-    flow_gen_gd_FE_norm_t = FEt_N_samples(flow_gen_gd_FE_norm, Time_gf, genmut, genmu, Time, yt_embedded, geny)
+    flow_gen_gd_FE_norm_t = gen_filt_eval.F_over_t(flow_gen_gd_FE_norm, Time_gf, genmut, genmu, Time, yt_embedded, geny)
 
     plt.figure(figno + 4)
     plt.clf()
     plt.suptitle(f'Free energy gradient norm', fontsize=16)
-    plt.title(f'Local linear: {local_lin}, Data embedding: {meth_data}, Integration: {meth_int}', fontsize=12)
+    plt.title(f'Linearisation: {meth_lin}, Data embedding: {meth_data}, Integration: {meth_int}', fontsize=12)
     plt.plot(Time_gf[n], grad_FE_norm_t[n], label='Grad F norm',alpha=0.1)
     plt.plot(Time_gf[n], flow_gen_gd_FE_norm_t[n], label='D-Grad F norm',alpha=0.1)
     res=flow_gen_gd_FE_norm_t[n]-grad_FE_norm_t[n]
@@ -804,41 +321,16 @@ if fe_time:
     plt.figure(figno + 5)
     plt.clf()
     plt.suptitle(f'Step size', fontsize=16)
-    plt.title(f'Local linear: {local_lin}, Data embedding: {meth_data}, Integration: {meth_int}', fontsize=12)
+    plt.title(f'Linearisation: {meth_lin}, Data embedding: {meth_data}, Integration: {meth_int}', fontsize=12)
     plt.plot(Time_gf[n][:-1], Time_gf[n][1:] - Time_gf[n][:-1], label='step size')
-
 
     'Performance statistics'
 
-    print(f'Free action={np.sum(FEt[n])}')
-    print(f'Free action (omitting nans)={np.nansum(FEt[n])}')
+    print(f'Free action={np.mean(FEt[n])}')
+    print(f'Free action (omitting nans)={np.nanmean(FEt[n])}')
 
-try:
-    print(f'MSE={np.sum((xt_Euler_conv[0,:,n]-genmut[n][0,0,:])**2)/Time.size}')
-except Exception:
-    pass
-
-
-# test code henceforth
-
-np.sum(np.isnan(FEt[n][plot_indices]))
-Time_gf[n].size
-np.sum(np.isnan(log_det_Hess_t[n][plot_indices]))
-np.sum(np.isnan(gen_energy_t[n][plot_indices]))
-# np.nansum(np.sum((gen_energy_t+log_det_Hess_t)[plot_indices, n]-FEt[plot_indices, n]))
-
-input_sympy = genmu.row_join(geny)
-Hess_gen_energy = gen_coords.gen_Hessian(generative_energy_genmu, genmu)
-# sp.simplify(Hess_gen_energy-Hess_gen_energy.T) #good because equals zero
-# Hess_gen_energy_lambdified = sp.lambdify(input_sympy,Hess_gen_energy , "numpy")
-det_Hess_GE=sympy_det(Hess_gen_energy)
-# det_Hess_GE_lambdified = sp.lambdify(input_sympy,det_Hess_GE , "numpy")
-# t=1 #t=58 does not work
-# n=0
-# input_numpy = np.concatenate((genmut[:, :, t, n], yt_embedded[:, :, t, n]), axis=1)
-# Hess_t=Hess_gen_energy_lambdified(*input_numpy.ravel())
-# Hess_t.shape
-# np.linalg.det(Hess_t)
-# det_Hess_t=det_Hess_GE_lambdified(*input_numpy.ravel())
-
+    try:
+        print(f'MSE={np.sum((xt_Euler_conv[0,:,n]-genmut[n][0,0,:])**2)/Time.size}')
+    except Exception:
+        pass
 
