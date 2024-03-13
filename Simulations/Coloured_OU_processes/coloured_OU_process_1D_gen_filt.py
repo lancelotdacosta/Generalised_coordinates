@@ -193,20 +193,21 @@ yt_embedded = data_embedding.embed_data(yt, Time, order_y,meth_data)
 geny = gen_coords.serial_derivs_xt(y, t, order_y + 1)  # shape [dim_x,order+1]
 
 # Generalised filtering
-genmut, Time_gf= gen_filt.integrator_gen_filt_N_samples(flow_gen_gd_FE,Time,yt_embedded,geny,genmu,methint=meth_int)
+genmut, Time_gf= \
+    gen_filt.integrator_gen_filt_N_samples(flow_gen_gd_FE,Time,yt_embedded,geny,genmu,methint=meth_int,tol=1e-2)
 
-'Visualisation'
+'''Visualisation'''
 
+'Parameters of visualisation'
 # sample to plot
 n=0
-
 # time to plot
 plot_indices=range(0,Time.size)
-
 # plot aesthetics
 lw=1
 alpha=0.3
 
+'Output of generalised filtering (without confidence bars)'
 plt.figure(figno)
 plt.clf()
 plt.suptitle(f'1D Coloured OU process', fontsize=16)

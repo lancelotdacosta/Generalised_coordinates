@@ -62,23 +62,31 @@ def genmod_energy(F, x, t, order_x,Kw, hw, g, y, order_y,Kz,hz,  epsilon_w=1, ep
 
 'Free energy under the Laplace approximation for generative model'
 
-def log_det_hess(generative_energy_genmu,genmu):
+def log_det_hess(generative_energy_genmu,genmu,meth_Hess="berkowitz"):
     'Log determinant term of the Hessian of the generative energy'
     # First compute Hessian of generative Energy
     Hess_gen_energy = gen_coords.gen_Hessian(generative_energy_genmu, genmu)
     # compute log determinant
-    det_Hess_GE = symbolic_algebra.sympy_det(Hess_gen_energy)
-    log_det_Hess_GE= det_Hess_GE.applyfunc(sp.log)
-    return log_det_Hess_GE
+    det_Hess_GE=Hess_gen_energy.det(meth_Hess) #meth_Hess=: 'berkowitz', 'det_LU', 'bareis'
+    try:
+        if det_Hess_GE <=0:
+            raise TypeError(det_Hess_GE + 'Symbolic Hessian not pos def -> suggest changing meth_Hess')
+    except Exception:
+        pass
+    log_det_Hess_GE = sp.log(det_Hess_GE)
+    # OLD IMPLEMENTATION BELOW (COFACTOR EXPANSION, DOESNT SCALE)
+    # det_Hess_GE = symbolic_algebra.sympy_det(Hess_gen_energy)
+    # log_det_Hess_GE= det_Hess_GE.applyfunc(sp.log)
+    return sp.Matrix([log_det_Hess_GE])
 
-def free_energy_laplace(generative_energy_genmu,log_det_Hess_GE):
+def free_energy_laplace(generative_energy_genmu,log_det_Hess):
 
     '''THIS RETURNS THE FREE ENERGY WITH OPTIMAL COVARIANCE UNDER THE LAPLACE APPROXIMATION
     DID NOT IMPLEMENT FREE ENERGY UNDER THE LOCAL LINEAR ASSUMPTION,
     IE I DO NOT IGNORE SECOND ORDER DERIVATIVES OF THE FLOWS THAT ARISE IN THE HESSIAN'''
 
     #return free energy with optimal covariance under the Laplace approximation- up to a different constant
-    return  generative_energy_genmu + log_det_Hess_GE /2
+    return  generative_energy_genmu + log_det_Hess /2
 
 
 '''Free energy gradients'''

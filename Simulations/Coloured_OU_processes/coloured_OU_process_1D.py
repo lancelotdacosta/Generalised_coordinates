@@ -100,7 +100,6 @@ for i in range(N):
 
 
 
-
 '''Part 3: Euler integration where white noise is given by generalised coordinate sample paths'''
 
 
@@ -157,8 +156,8 @@ plt.plot(Time[plot_indices], xt_least[0,plot_indices,0], color=c_least,linestyle
 # plt.legend()
 plt.xlabel(r'Time $t$')
 plt.ylabel(r'$x_t$')
-plt.suptitle('Coloured OU process', fontsize=16)
-plt.title(f'Zig-zag method, order={tilde_x0.shape[1]}', fontsize=14)
+# plt.suptitle('1d linear process', fontsize=16)
+plt.title(f'Zig-zag method, order={order}', fontsize=14)
 plt.ylim(top=11,bottom=-5)
 # plt.savefig(f"OU2d_EPR_func_gamma.png", dpi=100)
 plt.savefig("OU_1D_zigzag.png", dpi=100)
@@ -175,7 +174,7 @@ plt.plot(Time[plot_indices], xt_least[0,plot_indices,0], color=c_least,linestyle
 plt.xlabel(r'Time $t$')
 plt.ylabel(r'$x_t$')
 plt.suptitle('Coloured OU process', fontsize=16)
-plt.title(f'Hybrid Euler-Gen method, order={tilde_x0.shape[1]}', fontsize=14)
+plt.title(f'Hybrid Euler-Gen method, order={order}', fontsize=14)
 plt.ylim(top=11,bottom=-5)
 # plt.savefig(f"OU2d_EPR_func_gamma.png", dpi=100)
 
@@ -189,8 +188,9 @@ for n in range(N_plot):  # Iterating over samples of white noise
 plt.plot(Time[plot_indices], xt_least[0,plot_indices,0], color=c_least,linestyle=':')
 plt.xlabel(r'Time $t$')
 plt.ylabel(r'$x_t$')
-plt.suptitle('Coloured OU process', fontsize=16)
-plt.title(f'Classical Euler-Conv method', fontsize=14)
+# plt.suptitle('Coloured OU process', fontsize=16)
+plt.suptitle('1d linear process', fontsize=16)
+plt.title(f'Euler method', fontsize=14)
 plt.ylim(top=11,bottom=-5)
 # plt.savefig(f"OU2d_EPR_func_gamma.png", dpi=100)
 plt.savefig("OU_1D_Eulerconv.png", dpi=100)

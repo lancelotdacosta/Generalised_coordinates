@@ -87,7 +87,7 @@ def RK45_gen_filt(genFlow,Time,yt_embedded,geny,genmu, tol=1e-2 , hmax=1e-1, hmi
     # print('=RK45 integration for generalised filtering=')
 
     [dim_x,order_x_pone]=genmu.shape
-    [dim_y,order_y_pone,T]=yt_embedded.shape
+    # [dim_y,order_y_pone,T]=yt_embedded.shape
 
     'setup function'
     input_sympy= genmu.row_join(geny)
@@ -180,7 +180,7 @@ def RK45_gen_filt(genFlow,Time,yt_embedded,geny,genmu, tol=1e-2 , hmax=1e-1, hmi
         if r.size > 0:
             r = np.max(r)
 
-        if r<=tol: #in which case we accept the step (tol is the error tolerance per step)
+        if r<=tol: #in which case we accept the step (tol is the maximum error tolerance per step)
             t = t + h #increase time by timestep
             temp = genmut_variable[:, :, -1] + c1 * k1 + c3 * k3 + c4 * k4 + c5 * k5 #estimate of solution
             Times_variable = np.append(Times_variable, t)
@@ -199,6 +199,7 @@ def RK45_gen_filt(genFlow,Time,yt_embedded,geny,genmu, tol=1e-2 , hmax=1e-1, hmi
 
     # return linear_interpolation(genmut_variable,Times_variable,Time)
     return genmut_variable, Times_variable
+
 # def adaptive_Euler_gen_filt(genFlow,Time,yt_embedded,geny,genmu):
 #     # method developed for filtering ONE sample path only
 #     print('=adaptive Euler integration for generalised filtering=')
@@ -254,10 +255,7 @@ def RK45_gen_filt(genFlow,Time,yt_embedded,geny,genmu, tol=1e-2 , hmax=1e-1, hmi
 #     return genmut
 
 
-def integrator_gen_filt_N_samples(genFlow,Time,yt_embedded,geny,genmu,methint='Euler'):
-
-    print(f'===={methint} integration for generalised filtering====')
-
+def integrator_gen_filt_N_samples(genFlow,Time,yt_embedded,geny,genmu,methint='Euler',tol=1e-2):
     # [dim_x,order_x_pone]=genmu.shape
     [dim_y,order_y_pone,T,N]=yt_embedded.shape
 
@@ -283,7 +281,7 @@ def integrator_gen_filt_N_samples(genFlow,Time,yt_embedded,geny,genmu,methint='E
             Time_gf[n]=Time
         elif methint=='RK45':
             hmax=np.max(Time[1:]-Time[:-1])
-            genmut[n],Time_gf[n] = RK45_gen_filt(genFlow, Time, yt_embedded[:, :, :, n], geny, genmu, hmax=hmax,tol=1e-3)
+            genmut[n],Time_gf[n] = RK45_gen_filt(genFlow, Time, yt_embedded[:, :, :, n], geny, genmu, hmax=hmax,tol=tol)
         else: # If an exact match is not confirmed, this last case will be used if provided
             raise TypeError('integrator not yet supported')
 

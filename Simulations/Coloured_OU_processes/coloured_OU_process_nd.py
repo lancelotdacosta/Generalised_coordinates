@@ -14,8 +14,6 @@ from scipy.linalg import expm
 import time
 
 
-
-
 '''Part 0: specifying the OU process'''
 
 'Part 0a: Specifying the flow of the OU process'''
@@ -51,12 +49,12 @@ K = sp.sqrt(beta / (2 * sp.pi)) * sp.exp(-beta / 2 * h * h) # NORMALISED Gaussia
 
 '''Part 1: Specifying parameters of integration'''
 
-N = 2 #30 #number of sample paths
+N = 30 #number of sample paths
 
 x0 = 10*np.ones([dim, N]) #initial condition
 
-T= 10#2.8
-timesteps=T*10**3#28*10**1)
+T= 2.8 #10
+timesteps=28*10**1 #T*10**3
 Time = np.linspace(0,T,timesteps) #time grid over which we integrate
 
 'Part 1a: getting the serial derivatives of the noise process'
@@ -153,7 +151,7 @@ grad_Lag=  gen_coords.Lagrangian_gradient(F,x,t,K,h,order,lin=True,trun=True)
 # Lag_lin= gen_coords.Lagrangian_linear(B,x,t,K,h,order,trun=True)
 
 'test Lagrangian and Lagrangian gradient'
-test_tilde_x0= lin_gen_coord.sol_lin_gen_coord(F,x,t,x0[:,:2],0*tilde_w0[:,:,:2])[:,:,0]
+test_tilde_x0= lin_zigzag.sol_lin_gen_coord(F,x,t,x0[:,:2],0*tilde_w0[:,:,:2])[:,:,0]
 genx=gen_coords.serial_derivs_xt(x,t,order+1)
 # grad_Lag_eval=gen_coords.gen_coord_eval(grad_Lag,genx,test_tilde_x0) #test Lagrangian gradient: should be ==0
 # Lag_eval=gen_coords.gen_coord_eval(Lag,genx,test_tilde_x0) #test Lagrangian: should be ==0
@@ -188,8 +186,8 @@ alpha=0.3
 
 plt.figure(1)
 plt.clf()
-plt.suptitle(f'2D Coloured OU process', fontsize=16)
-plt.title(f'Zig-zag method, order={tilde_x0.shape[1]}', fontsize=14)
+# plt.suptitle(f'2D Coloured OU process', fontsize=16)
+plt.title(f'Zig-zag method, order={order}', fontsize=14)
 plt.plot(xt_least[0,plot_indices,0], xt_least[1,plot_indices,0], color='gray',linestyle=':')
 for n in range(N):
     colourline.plot_cool(xt[0, plot_indices, n].reshape(plot_timesteps), xt[1, plot_indices, n].reshape(plot_timesteps), lw=lw,alpha=alpha)
@@ -208,7 +206,7 @@ for n in range(N):  # Iterating over samples of white noise
     #plt.plot(xt_Euler_gen[0,plot_indices, n], xt_Euler_gen[1,plot_indices, n], linewidth=lw,alpha=alpha)
     colourline.plot_cool(xt_Euler_gen[0, plot_indices, n].reshape(plot_timesteps), xt_Euler_gen[1, plot_indices, n].reshape(plot_timesteps), lw=lw,alpha=alpha)
 plt.suptitle('2D Coloured OU process', fontsize=16)
-plt.title(f'Hybrid Euler-Gen method, order={tilde_x0.shape[1]}', fontsize=14)
+plt.title(f'Hybrid Euler-Gen method, order={order}', fontsize=14)
 plt.xlim(right=12,left=-5)
 plt.ylim(top=12,bottom=-5)
 # plt.savefig(f"OU2d_EPR_func_gamma.png", dpi=100)
@@ -222,8 +220,8 @@ plt.plot(xt_least[0,plot_indices,0], xt_least[1,plot_indices,0], color='gray',li
 for n in range(N):  # Iterating over samples of white noise
     #plt.plot(xt_Euler_gen[0,plot_indices, n], xt_Euler_gen[1,plot_indices, n], linewidth=lw,alpha=alpha)
     colourline.plot_cool(xt_Euler_conv[0, plot_indices, n].reshape(plot_timesteps), xt_Euler_conv[1, plot_indices, n].reshape(plot_timesteps), lw=lw,alpha=alpha)
-plt.suptitle('2D Coloured OU process', fontsize=16)
-plt.title(f'Classical Euler-Conv method', fontsize=14)
+plt.suptitle('2d linear process', fontsize=16)
+plt.title(f'Euler method', fontsize=14)
 plt.xlim(right=12,left=-5)
 plt.ylim(top=12,bottom=-5)
 # plt.savefig(f"OU2d_EPR_func_gamma.png", dpi=100)

@@ -81,7 +81,7 @@ tilde_w0= epsilon*sampling_generalised_noise.sample_gen_noise_nd(K=K,wrt=h,at=at
 
 'Part 2a: Getting serial derivatives of solution for each sample at time <at> '
 
-tilde_x0=gen_coord.sol_gen_coords(F,x,t,x0,tilde_w0)
+tilde_x0=zigzag.sol_gen_coords(F,x,t,x0,tilde_w0)
 # tilde_x0_test=gen_coord_test.sol_gen_coords(F,x,t,x0,tilde_w0)
 
 'Part 2b: Generating sample paths of solution'
@@ -95,7 +95,7 @@ for n in range(N):
 
 'Part 2c: Getting serial derivatives of solution for each sample at time <at> using linearised method'
 
-tilde_x0_lin = lin_gen_coord.sol_lin_gen_coord(F,x,t,x0,tilde_w0)
+tilde_x0_lin = lin_zigzag.sol_lin_gen_coord(F,x,t,x0,tilde_w0)
 
 'Part 2d: Generating sample paths of solution'
 
@@ -158,8 +158,8 @@ ylim_2D=[0,2.5]
 plt.figure(1)
 print('Plot 1')
 plt.clf()
-plt.suptitle(f'Lotka Volterra (2D view)', fontsize=16)
-plt.title(f'Zig-zag method, order={tilde_x0.shape[1]}', fontsize=14)
+# plt.suptitle(f'Lotka Volterra (2D view)', fontsize=16)
+plt.title(f'Zig-zag method, order={order}', fontsize=14)
 for n in range(N):
     #plt.plot(xt[0, plot_indices, n], xt[1, plot_indices, n], linewidth=lw, alpha=alpha)
     colourline.plot_cmap(xt[0, plot_indices, n], xt[1, plot_indices, n], lw=lw,alpha=alpha,cmap=c_2D,crev=True)
@@ -179,8 +179,8 @@ plt.savefig("Lotka-Volterra_2D_zigzag.png", dpi=100)
 plt.figure(2)
 print('Plot 2')
 plt.clf()
-plt.suptitle(f'Lotka Volterra (2D view)', fontsize=16)
-plt.title(f'Linearised zig-zag method, order={tilde_x0.shape[1]}', fontsize=14)
+# plt.suptitle(f'Lotka Volterra (2D view)', fontsize=16)
+plt.title(f'Linearised zig-zag method, order={order}', fontsize=14)
 for n in range(N):
     #plt.plot(xt[0, plot_indices, n], xt[1, plot_indices, n], linewidth=lw, alpha=alpha)
     colourline.plot_cmap(xt_lin[0, plot_indices, n], xt_lin[1, plot_indices, n], lw=lw,alpha=alpha,cmap=c_2D,crev=True)
@@ -201,8 +201,8 @@ for n in range(N):  # Iterating over samples of white noise
     #plt.plot(xt_Euler_gen[0,plot_indices, n], xt_Euler_gen[1,plot_indices, n], linewidth=lw,alpha=alpha)
     colourline.plot_cmap(xt_Euler_conv[0, plot_indices, n], xt_Euler_conv[1, plot_indices, n], lw=lw,alpha=alpha,cmap=c_2D,crev=True)
 plt.plot(xt_least[0,plot_indices,0], xt_least[1,plot_indices,0], color='gray',linestyle=':')
-plt.suptitle('Lotka Volterra (2D view)', fontsize=16)
-plt.title(f'Classical Euler-Conv method', fontsize=14)
+# plt.suptitle('Lotka Volterra (2D view)', fontsize=16)
+plt.title(f'Euler method', fontsize=14)
 plt.xlim(xlim_2D)
 plt.ylim(ylim_2D)
 # plt.ylim(top=12,bottom=-5)
@@ -220,8 +220,8 @@ ylim_1D=(-0,2.5)
 plt.figure(4)
 print('Plot 4')
 plt.clf()
-plt.suptitle(f'Lotka Volterra', fontsize=16)
-plt.title(f'Zig-zag method, order={tilde_x0.shape[1]}', fontsize=14)
+# plt.suptitle(f'Stochastic Lotka Volterra', fontsize=16)
+plt.title(f'Zig-zag method, order={order}', fontsize=14)
 for n in range(N):
     #plt.plot(xt[0, plot_indices, n], xt[1, plot_indices, n], linewidth=lw, alpha=alpha)
     colourline.plot_cmap(Time[plot_indices], xt[0, plot_indices, n], lw=lw,alpha=alpha,cmap=c_prey,crev=True)
@@ -239,8 +239,8 @@ plt.savefig("Lotka-Volterra_1D_zigzag.png", dpi=100)
 plt.figure(5)
 print('Plot 5')
 plt.clf()
-plt.suptitle(f'Lotka Volterra', fontsize=16)
-plt.title(f'Linearised zig-zag method, order={tilde_x0.shape[1]}', fontsize=14)
+# plt.suptitle(f'Lotka Volterra', fontsize=16)
+plt.title(f'Linearised zig-zag method, order={order}', fontsize=14)
 for n in range(N):
     #plt.plot(xt[0, plot_indices, n], xt[1, plot_indices, n], linewidth=lw, alpha=alpha)
     colourline.plot_cmap(Time[plot_indices], xt_lin[0, plot_indices, n], lw=lw,alpha=alpha,cmap=c_prey,crev=True)
@@ -262,8 +262,8 @@ plt.savefig("Lotka-Volterra_1D_linzigzag.png", dpi=100)
 plt.figure(6)
 print('Plot 6')
 plt.clf()
-plt.suptitle(f'Lotka Volterra', fontsize=16)
-plt.title(f'Classical Euler-Conv method', fontsize=14)
+# plt.suptitle(f'Lotka Volterra', fontsize=16)
+plt.title(f'Euler method', fontsize=14)
 for n in range(N):
     #plt.plot(xt[0, plot_indices, n], xt[1, plot_indices, n], linewidth=lw, alpha=alpha)
     colourline.plot_cmap(Time[plot_indices], xt_Euler_conv[0, plot_indices, n], lw=lw,alpha=alpha,cmap=c_prey,crev=True)
@@ -279,49 +279,49 @@ plt.savefig("Lotka-Volterra_1D_Eulerconv.png", dpi=100)
 
 
 
-
-'Part 6e: 2D plot of white noise sample paths convolved with a Gaussian kernel'
-
-plt.figure(7)
-print('Plot 7')
-plt.clf()
-for n in range(N):  # Iterating over samples of white noise
-    #plt.plot(wt[0,plot_indices, n], wt[1,plot_indices, n], linewidth=lw,alpha=0.5)
-    colourline.plot_cool(wt_conv[0, plot_indices, n].reshape(plot_timesteps), wt_conv[1, plot_indices, n].reshape(plot_timesteps), lw=lw,alpha=0.5)
-plt.suptitle('2D Coloured noise', fontsize=16)
-plt.title(f'Standard convolution method', fontsize=14)
-#plt.xlim(right=2.5,left=-2.5)
-#plt.ylim(top=2.5,bottom=-2.5)
-# plt.savefig(f"OU2d_EPR_func_gamma.png", dpi=100)
-
-
-'Part 6f: 1D plot of convolved white noise generalised coordinate sample paths'
-
-plt.figure(8)
-print('Plot 8')
-plt.clf()
-for n in range(N):
-    #plt.plot(Time[plot_indices], wt[1, plot_indices, n] / wt[0, plot_indices, n], linewidth=lw, alpha=1,color='b')
-    for d in range(dim):  # Iterating over samples of white noise
-        plt.plot(Time[plot_indices], wt_conv[d,plot_indices, n], linewidth=lw,alpha=0.5)
-plt.xlabel(r'Time $t$')
-plt.ylabel(r'$w_t$')
-plt.suptitle('Coloured noise', fontsize=16)#
-plt.title(f'Standard convolution method', fontsize=14)
-#plt.ylim(top=10,bottom=-10)
-# plt.savefig(f"OU2d_EPR_func_gamma.png", dpi=100)
-
-
-
-
-'''tests'''
-# print(np.sum(np.abs(tilde_x0_lin-tilde_x0)[:,3,:])) #should be equal up to order 2 included
-res0=np.abs(tilde_x0_lin-tilde_x0)[:,0,:] #should be zeroes
-res1=np.abs(tilde_x0_lin-tilde_x0)[:,1,:] #should be zeroes
-res2=np.abs(tilde_x0_lin-tilde_x0)[:,2,:] #should be zeroes
-res3=np.abs(tilde_x0_lin-tilde_x0)[:,3,:] #should be non zeroes
-res4=np.abs(tilde_x0_lin-tilde_x0)[:,4,:] #should be non zeroes
-print(np.sum(res0),np.sum(res1),np.sum(res2),np.sum(res3),np.sum(res4))
-
-res= xt-xt_lin
-print(np.sum(np.abs(res)))
+#
+# 'Part 6e: 2D plot of white noise sample paths convolved with a Gaussian kernel'
+#
+# plt.figure(7)
+# print('Plot 7')
+# plt.clf()
+# for n in range(N):  # Iterating over samples of white noise
+#     #plt.plot(wt[0,plot_indices, n], wt[1,plot_indices, n], linewidth=lw,alpha=0.5)
+#     colourline.plot_cool(wt_conv[0, plot_indices, n].reshape(plot_timesteps), wt_conv[1, plot_indices, n].reshape(plot_timesteps), lw=lw,alpha=0.5)
+# plt.suptitle('2D Coloured noise', fontsize=16)
+# plt.title(f'Standard convolution method', fontsize=14)
+# #plt.xlim(right=2.5,left=-2.5)
+# #plt.ylim(top=2.5,bottom=-2.5)
+# # plt.savefig(f"OU2d_EPR_func_gamma.png", dpi=100)
+#
+#
+# 'Part 6f: 1D plot of convolved white noise generalised coordinate sample paths'
+#
+# plt.figure(8)
+# print('Plot 8')
+# plt.clf()
+# for n in range(N):
+#     #plt.plot(Time[plot_indices], wt[1, plot_indices, n] / wt[0, plot_indices, n], linewidth=lw, alpha=1,color='b')
+#     for d in range(dim):  # Iterating over samples of white noise
+#         plt.plot(Time[plot_indices], wt_conv[d,plot_indices, n], linewidth=lw,alpha=0.5)
+# plt.xlabel(r'Time $t$')
+# plt.ylabel(r'$w_t$')
+# plt.suptitle('Coloured noise', fontsize=16)#
+# plt.title(f'Standard convolution method', fontsize=14)
+# #plt.ylim(top=10,bottom=-10)
+# # plt.savefig(f"OU2d_EPR_func_gamma.png", dpi=100)
+#
+#
+#
+#
+# '''tests'''
+# # print(np.sum(np.abs(tilde_x0_lin-tilde_x0)[:,3,:])) #should be equal up to order 2 included
+# res0=np.abs(tilde_x0_lin-tilde_x0)[:,0,:] #should be zeroes
+# res1=np.abs(tilde_x0_lin-tilde_x0)[:,1,:] #should be zeroes
+# res2=np.abs(tilde_x0_lin-tilde_x0)[:,2,:] #should be zeroes
+# res3=np.abs(tilde_x0_lin-tilde_x0)[:,3,:] #should be non zeroes
+# res4=np.abs(tilde_x0_lin-tilde_x0)[:,4,:] #should be non zeroes
+# print(np.sum(res0),np.sum(res1),np.sum(res2),np.sum(res3),np.sum(res4))
+#
+# res= xt-xt_lin
+# print(np.sum(np.abs(res)))

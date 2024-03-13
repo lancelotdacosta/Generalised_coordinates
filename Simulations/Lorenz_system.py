@@ -90,7 +90,7 @@ tilde_w0= epsilon*sampling_generalised_noise.sample_gen_noise_nd(K=K,wrt=h,at=at
 
 'Part 2a: Getting serial derivatives of solution for each sample at time <at> '
 
-tilde_x0=gen_coord.sol_gen_coords(F,x,t,x0,tilde_w0)
+tilde_x0=zigzag.sol_gen_coords(F,x,t,x0,tilde_w0)
 
 
 'Part 2b: Generating sample paths of solution'
@@ -105,7 +105,7 @@ for n in range(N):
 
 'Part 2c: Getting serial derivatives of solution for each sample at time <at> using linearised method'
 
-tilde_x0_lin = lin_gen_coord.sol_lin_gen_coord(F,x,t,x0,tilde_w0)
+tilde_x0_lin = lin_zigzag.sol_lin_gen_coord(F,x,t,x0,tilde_w0)
 
 'Part 2d: Generating sample paths of solution'
 
@@ -169,8 +169,8 @@ ax.axes.set_zlabel('z')
 xlim = ax.get_xlim()
 ylim = ax.get_ylim()
 zlim = ax.get_zlim()
-plt.suptitle('Paths of least action')
-plt.title(f'3D')
+plt.suptitle('Least action paths')
+# plt.title(f'3D')
 #ax.legend() #loc="upper right"
 plt.savefig("Lorenz_3D_least.png", dpi=100)
 
@@ -185,40 +185,40 @@ for n in range(N_plot):
     if n % (10 ** 2) == 0:
         print('n', n, '/', N_plot)
     colourline.plot_cmap(xt_least[0, :timesteps_plot, n], xt_least[1, :timesteps_plot, n], cmap=cmap, lw=lw,alpha=alpha)
-plt.suptitle('Paths of least action ', fontsize=16)
+# plt.suptitle('Paths of least action ', fontsize=16)
 plt.title(f'x-y plane', fontsize=14)
 plt.xlabel(r'$x$')
 plt.ylabel(r'$y$')
 plt.savefig("Lorenz_2D_xy_least.png", dpi=100)
 
 
-plt.figure(3)
-plt.clf()
-print('====Plot least action paths xz plane===')
-for n in range(N_plot):
-    if n % (10 ** 2) == 0:
-        print('n', n, '/', N_plot)
-    colourline.plot_cmap(xt_least[0, :timesteps_plot, n], xt_least[2, :timesteps_plot, n], cmap=cmap, lw=lw,alpha=alpha)
-plt.suptitle('Paths of least action', fontsize=16)
-plt.title(f'x-z plane', fontsize=14)
-plt.xlabel(r'$x$')
-plt.ylabel(r'$z$')
-plt.savefig("Lorenz_2D_xz_least.png", dpi=100)
+# plt.figure(3)
+# plt.clf()
+# print('====Plot least action paths xz plane===')
+# for n in range(N_plot):
+#     if n % (10 ** 2) == 0:
+#         print('n', n, '/', N_plot)
+#     colourline.plot_cmap(xt_least[0, :timesteps_plot, n], xt_least[2, :timesteps_plot, n], cmap=cmap, lw=lw,alpha=alpha)
+# plt.suptitle('Paths of least action', fontsize=16)
+# plt.title(f'x-z plane', fontsize=14)
+# plt.xlabel(r'$x$')
+# plt.ylabel(r'$z$')
+# plt.savefig("Lorenz_2D_xz_least.png", dpi=100)
 
 
-
-plt.figure(4)
-plt.clf()
-print('====Plot least action paths yz plane===')
-for n in range(N_plot):
-    if n % (10 ** 2) == 0:
-        print('n', n, '/', N_plot)
-    colourline.plot_cmap(xt_least[1, :timesteps_plot, n], xt_least[2, :timesteps_plot, n], cmap=cmap, lw=lw,alpha=alpha)
-plt.suptitle('Paths of least action', fontsize=16)
-plt.title(f'y-z plane', fontsize=14)
-plt.xlabel(r'$y$')
-plt.ylabel(r'$z$')
-plt.savefig("Lorenz_2D_yz_least.png", dpi=100)
+#
+# plt.figure(4)
+# plt.clf()
+# print('====Plot least action paths yz plane===')
+# for n in range(N_plot):
+#     if n % (10 ** 2) == 0:
+#         print('n', n, '/', N_plot)
+#     colourline.plot_cmap(xt_least[1, :timesteps_plot, n], xt_least[2, :timesteps_plot, n], cmap=cmap, lw=lw,alpha=alpha)
+# plt.suptitle('Paths of least action', fontsize=16)
+# plt.title(f'y-z plane', fontsize=14)
+# plt.xlabel(r'$y$')
+# plt.ylabel(r'$z$')
+# plt.savefig("Lorenz_2D_yz_least.png", dpi=100)
 
 
 
@@ -242,8 +242,8 @@ ax.axes.set_zlim3d(zlim)
 ax.axes.set_xlabel('x')
 ax.axes.set_ylabel('y')
 ax.axes.set_zlabel('z')
-plt.suptitle('Generalised coordinate sample paths')
-plt.title(f'3D')
+plt.suptitle(f'Zig-zag method, order={order}')
+# plt.title(f'3D')
 plt.savefig("Lorenz_3D_zigzag.png", dpi=100)
 
 
@@ -257,45 +257,45 @@ for n in range(N_plot):
     if n % (10 ** 2) == 0:
         print('n', n, '/', N_plot)
     colourline.plot_cmap(xt[0, :timesteps_plot, n], xt[1, :timesteps_plot, n], cmap=cmap, lw=lw,alpha=alpha)
-plt.suptitle('Generalised coordinate sample paths', fontsize=16)
+# plt.suptitle('Generalised coordinate sample paths', fontsize=16)
 plt.title(f'x-y plane', fontsize=14)
 plt.xlabel(r'$x$')
 plt.ylabel(r'$y$')
 plt.xlim(xlim)
 plt.ylim(ylim)
 plt.savefig("Lorenz_2D_xy_zigzag.png", dpi=100)
-
-plt.figure(7)
-plt.clf()
-print('====Plot generalised coordinate paths xz plane===')
-for n in range(N_plot):
-    if n % (10 ** 2) == 0:
-        print('n', n, '/', N_plot)
-    colourline.plot_cmap(xt[0, :timesteps_plot, n], xt[2, :timesteps_plot, n], cmap=cmap, lw=lw,alpha=alpha)
-plt.suptitle('Generalised coordinate sample paths', fontsize=16)
-plt.title(f'x-z plane', fontsize=14)
-plt.xlabel(r'$x$')
-plt.ylabel(r'$z$')
-plt.xlim(xlim)
-plt.ylim(zlim)
-plt.savefig("Lorenz_2D_xz_zigzag.png", dpi=100)
-
-
-
-plt.figure(8)
-plt.clf()
-print('====Plot generalised coordinate paths yz plane===')
-for n in range(N_plot):
-    if n % (10 ** 2) == 0:
-        print('n', n, '/', N_plot)
-    colourline.plot_cmap(xt[1, :timesteps_plot, n], xt[2, :timesteps_plot, n], cmap=cmap, lw=lw,alpha=alpha)
-plt.suptitle('Generalised coordinate sample paths', fontsize=16)
-plt.title(f'y-z plane', fontsize=14)
-plt.xlabel(r'$y$')
-plt.ylabel(r'$z$')
-plt.xlim(ylim)
-plt.ylim(zlim)
-plt.savefig("Lorenz_2D_yz_zigzag.png", dpi=100)
+#
+# plt.figure(7)
+# plt.clf()
+# print('====Plot generalised coordinate paths xz plane===')
+# for n in range(N_plot):
+#     if n % (10 ** 2) == 0:
+#         print('n', n, '/', N_plot)
+#     colourline.plot_cmap(xt[0, :timesteps_plot, n], xt[2, :timesteps_plot, n], cmap=cmap, lw=lw,alpha=alpha)
+# plt.suptitle('Generalised coordinate sample paths', fontsize=16)
+# plt.title(f'x-z plane', fontsize=14)
+# plt.xlabel(r'$x$')
+# plt.ylabel(r'$z$')
+# plt.xlim(xlim)
+# plt.ylim(zlim)
+# plt.savefig("Lorenz_2D_xz_zigzag.png", dpi=100)
+#
+#
+#
+# plt.figure(8)
+# plt.clf()
+# print('====Plot generalised coordinate paths yz plane===')
+# for n in range(N_plot):
+#     if n % (10 ** 2) == 0:
+#         print('n', n, '/', N_plot)
+#     colourline.plot_cmap(xt[1, :timesteps_plot, n], xt[2, :timesteps_plot, n], cmap=cmap, lw=lw,alpha=alpha)
+# plt.suptitle('Generalised coordinate sample paths', fontsize=16)
+# plt.title(f'y-z plane', fontsize=14)
+# plt.xlabel(r'$y$')
+# plt.ylabel(r'$z$')
+# plt.xlim(ylim)
+# plt.ylim(zlim)
+# plt.savefig("Lorenz_2D_yz_zigzag.png", dpi=100)
 
 
 
@@ -319,8 +319,8 @@ ax.axes.set_zlim3d(zlim)
 ax.axes.set_xlabel('x')
 ax.axes.set_ylabel('y')
 ax.axes.set_zlabel('z')
-plt.suptitle('Classical Euler-Convolution paths')
-plt.title(f'3D')
+plt.suptitle('Euler method')
+# plt.title(f'3D')
 plt.savefig("Lorenz_3D_Eulerconv.png", dpi=100)
 
 
@@ -334,7 +334,7 @@ for n in range(N_plot):
     if n % (10 ** 2) == 0:
         print('n', n, '/', N_plot)
     colourline.plot_cmap(xt_Euler_conv[0, :timesteps_plot, n], xt_Euler_conv[1, :timesteps_plot, n], cmap=cmap, lw=lw,alpha=alpha)
-plt.suptitle('Classical Euler-Convolution paths', fontsize=16)
+# plt.suptitle('Classical Euler-Convolution paths', fontsize=16)
 plt.title(f'x-y plane', fontsize=14)
 plt.xlabel(r'$x$')
 plt.ylabel(r'$y$')
@@ -342,39 +342,39 @@ plt.xlim(xlim)
 plt.ylim(ylim)
 plt.savefig("Lorenz_2D_xy_Eulerconv.png", dpi=100)
 
-
-plt.figure(11)
-plt.clf()
-print('====Plot Euler convolution paths xz plane===')
-for n in range(N_plot):
-    if n % (10 ** 2) == 0:
-        print('n', n, '/', N_plot)
-    colourline.plot_cmap(xt_Euler_conv[0, :timesteps_plot, n], xt_Euler_conv[2, :timesteps_plot, n], cmap=cmap, lw=lw,alpha=alpha)
-plt.suptitle('Classical Euler-Convolution paths', fontsize=16)
-plt.title(f'x-z plane', fontsize=14)
-plt.xlabel(r'$x$')
-plt.ylabel(r'$z$')
-plt.xlim(xlim)
-plt.ylim(zlim)
-plt.savefig("Lorenz_2D_xz_Eulerconv.png", dpi=100)
-
-
-
-plt.figure(12)
-plt.clf()
-print('====Plot Euler convolution paths yz plane===')
-for n in range(N_plot):
-    if n % (10 ** 2) == 0:
-        print('n', n, '/', N_plot)
-    colourline.plot_cmap(xt_Euler_conv[1, :timesteps_plot, n], xt_Euler_conv[2, :timesteps_plot, n], cmap=cmap, lw=lw,alpha=alpha)
-plt.suptitle('Classical Euler-Convolution paths', fontsize=16)
-plt.title(f'y-z plane', fontsize=14)
-plt.xlabel(r'$y$')
-plt.ylabel(r'$z$')
-plt.xlim(ylim)
-plt.ylim(zlim)
-plt.savefig("Lorenz_2D_yz_Eulerconv.png", dpi=100)
-
+#
+# plt.figure(11)
+# plt.clf()
+# print('====Plot Euler convolution paths xz plane===')
+# for n in range(N_plot):
+#     if n % (10 ** 2) == 0:
+#         print('n', n, '/', N_plot)
+#     colourline.plot_cmap(xt_Euler_conv[0, :timesteps_plot, n], xt_Euler_conv[2, :timesteps_plot, n], cmap=cmap, lw=lw,alpha=alpha)
+# plt.suptitle('Classical Euler-Convolution paths', fontsize=16)
+# plt.title(f'x-z plane', fontsize=14)
+# plt.xlabel(r'$x$')
+# plt.ylabel(r'$z$')
+# plt.xlim(xlim)
+# plt.ylim(zlim)
+# plt.savefig("Lorenz_2D_xz_Eulerconv.png", dpi=100)
+#
+#
+#
+# plt.figure(12)
+# plt.clf()
+# print('====Plot Euler convolution paths yz plane===')
+# for n in range(N_plot):
+#     if n % (10 ** 2) == 0:
+#         print('n', n, '/', N_plot)
+#     colourline.plot_cmap(xt_Euler_conv[1, :timesteps_plot, n], xt_Euler_conv[2, :timesteps_plot, n], cmap=cmap, lw=lw,alpha=alpha)
+# plt.suptitle('Classical Euler-Convolution paths', fontsize=16)
+# plt.title(f'y-z plane', fontsize=14)
+# plt.xlabel(r'$y$')
+# plt.ylabel(r'$z$')
+# plt.xlim(ylim)
+# plt.ylim(zlim)
+# plt.savefig("Lorenz_2D_yz_Eulerconv.png", dpi=100)
+#
 
 
 'Part 5c: 3D generalised coordinate paths (linearised)'
@@ -397,8 +397,8 @@ ax.axes.set_zlim3d(zlim)
 ax.axes.set_xlabel('x')
 ax.axes.set_ylabel('y')
 ax.axes.set_zlabel('z')
-plt.suptitle('Linearised generalised coordinate sample paths')
-plt.title(f'3D')
+plt.suptitle(f'Linearised zig-zag method, order={order}')
+# plt.title(f'3D')
 plt.savefig("Lorenz_3D_linzigzag.png", dpi=100)
 
 
@@ -412,7 +412,7 @@ for n in range(N_plot):
     if n % (10 ** 2) == 0:
         print('n', n, '/', N_plot)
     colourline.plot_cmap(xt_lin[0, :timesteps_plot, n], xt_lin[1, :timesteps_plot, n], cmap=cmap, lw=lw,alpha=alpha)
-plt.suptitle('Linearised generalised coordinate sample paths', fontsize=16)
+# plt.suptitle('Linearised generalised coordinate sample paths', fontsize=16)
 plt.title(f'x-y plane', fontsize=14)
 plt.xlabel(r'$x$')
 plt.ylabel(r'$y$')
@@ -420,39 +420,39 @@ plt.xlim(xlim)
 plt.ylim(ylim)
 plt.savefig("Lorenz_2D_xy_linzigzag.png", dpi=100)
 
-
-plt.figure(15)
-plt.clf()
-print('====Plot generalised coordinate paths (linearised) xz plane===')
-for n in range(N_plot):
-    if n % (10 ** 2) == 0:
-        print('n', n, '/', N_plot)
-    colourline.plot_cmap(xt_lin[0, :timesteps_plot, n], xt_lin[2, :timesteps_plot, n], cmap=cmap, lw=lw,alpha=alpha)
-plt.suptitle('Linearised generalised coordinate sample paths', fontsize=16)
-plt.title(f'x-z plane', fontsize=14)
-plt.xlabel(r'$x$')
-plt.ylabel(r'$z$')
-plt.xlim(xlim)
-plt.ylim(zlim)
-plt.savefig("Lorenz_2D_xz_linzigzag.png", dpi=100)
-
-
-
-plt.figure(16)
-plt.clf()
-print('====Plot generalised coordinate paths (linearised) yz plane===')
-for n in range(N_plot):
-    if n % (10 ** 2) == 0:
-        print('n', n, '/', N_plot)
-    colourline.plot_cmap(xt_lin[1, :timesteps_plot, n], xt_lin[2, :timesteps_plot, n], cmap=cmap, lw=lw,alpha=alpha)
-plt.suptitle('Linearised generalised coordinate sample paths', fontsize=16)
-plt.title(f'y-z plane', fontsize=14)
-plt.xlabel(r'$y$')
-plt.ylabel(r'$z$')
-plt.xlim(ylim)
-plt.ylim(zlim)
-plt.savefig("Lorenz_2D_yz_linzigzag.png", dpi=100)
-
+#
+# plt.figure(15)
+# plt.clf()
+# print('====Plot generalised coordinate paths (linearised) xz plane===')
+# for n in range(N_plot):
+#     if n % (10 ** 2) == 0:
+#         print('n', n, '/', N_plot)
+#     colourline.plot_cmap(xt_lin[0, :timesteps_plot, n], xt_lin[2, :timesteps_plot, n], cmap=cmap, lw=lw,alpha=alpha)
+# plt.suptitle('Linearised generalised coordinate sample paths', fontsize=16)
+# plt.title(f'x-z plane', fontsize=14)
+# plt.xlabel(r'$x$')
+# plt.ylabel(r'$z$')
+# plt.xlim(xlim)
+# plt.ylim(zlim)
+# plt.savefig("Lorenz_2D_xz_linzigzag.png", dpi=100)
+#
+#
+#
+# plt.figure(16)
+# plt.clf()
+# print('====Plot generalised coordinate paths (linearised) yz plane===')
+# for n in range(N_plot):
+#     if n % (10 ** 2) == 0:
+#         print('n', n, '/', N_plot)
+#     colourline.plot_cmap(xt_lin[1, :timesteps_plot, n], xt_lin[2, :timesteps_plot, n], cmap=cmap, lw=lw,alpha=alpha)
+# plt.suptitle('Linearised generalised coordinate sample paths', fontsize=16)
+# plt.title(f'y-z plane', fontsize=14)
+# plt.xlabel(r'$y$')
+# plt.ylabel(r'$z$')
+# plt.xlim(ylim)
+# plt.ylim(zlim)
+# plt.savefig("Lorenz_2D_yz_linzigzag.png", dpi=100)
+#
 
 
 '''tests'''
