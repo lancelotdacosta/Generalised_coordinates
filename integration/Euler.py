@@ -11,3 +11,12 @@ def Euler_integration(x0,f,wt,Time):
         step=Time[t+1]-Time[t]
         xt[:,t+1,:]=xt[:,t,:] + step*(f(xt[:,t,:])+wt[:,t,:])
     return xt
+
+def RK45_integration(x0,f,wt,Time):
+    xt = np.empty(wt.shape)
+    xt[:, 0, :]=x0
+    T=Time.size
+    for t in range(T-1):
+        step=Time[t+1]-Time[t]
+        xt[:,t+1,:]=xt[:,t,:] + step*(f(xt[:,t,:])+wt[:,t,:])
+    return xt
